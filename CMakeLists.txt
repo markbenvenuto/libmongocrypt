@@ -3,7 +3,7 @@ project (mongocrypt C)
 
 set (CMAKE_C_STANDARD 99)
 
-find_package(libmongoc-static-1.0 1.11)
+find_package(libmongoc-static-1.0 0.0)
 
 if(MONGOC_STATIC_VERSION)
    message("Found libmongoc and libbson, configuring to add real libmongocrypt target")
