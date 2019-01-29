@@ -10,15 +10,8 @@ using System.Diagnostics;
 
 namespace MongoDB.MongoCrypt
 {
-    public class Stuff
-    {
-        public static void Init()
-        {
-            Console.WriteLine("Initializing...");
 
-             Console.WriteLine("Version: " + LibMongoCrypt.GetVersion());
-        }
-    }
+
     /*
      * Windows:
      * https://stackoverflow.com/questions/2864673/specify-the-search-path-for-dllimport-in-net
@@ -28,52 +21,65 @@ namespace MongoDB.MongoCrypt
      * https://github.com/dotnet/corefx/issues/32015
      *
      */
-    internal class LibMongoCrypt
+    public class Library
     {
-        static  LibMongoCrypt() {
-            LibraryLoader.mongocrypt_init();
+        static Library()
+        {
+            LibraryLoader loader = new LibraryLoader();
+
+            mongocrypt_init = loader.getFunction<Delegates.mongocrypt_init>("mongocrypt_init");
+            mongocrypt_version = loader.getFunction<Delegates.mongocrypt_version>("mongocrypt_version");
         }
 
-        public static string GetVersion() {
-            IntPtr p = LibraryLoader.mongocrypt_version();
-             return Marshal.PtrToStringAnsi(p);
+        public static string GetVersion()
+        {
+            IntPtr p = mongocrypt_version();
+            return Marshal.PtrToStringAnsi(p);
+        }
+
+        public static readonly Delegates.mongocrypt_init mongocrypt_init;
+        public static readonly Delegates.mongocrypt_version mongocrypt_version;
+
+        public class Delegates
+        {
+            public delegate void mongocrypt_init();
+            public delegate IntPtr mongocrypt_version();
         }
 
         class LibraryLoader
         {
 
+            SharedLibraryLoader _loader;
             static string path = "/Users/mark/src/libmongocrypt/debug/libmongocrypt.dylib";
-            static LibraryLoader()
+            public LibraryLoader()
             {
+
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
                     // TOD
                 }
                 else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
                 {
-                    IntPtr handle = DarwinLibray.dlopen(path, DarwinLibray.RTLD_GLOBAL | DarwinLibray.RTLD_NOW);
-                    Console.WriteLine("handle : " + handle);
-                    if(handle == IntPtr.Zero) {
-                        throw new NotImplementedException();
-                    }
-
-                    IntPtr a1 = DarwinLibray.dlsym(handle, "mongocrypt_init");
-                    Console.WriteLine("handle : " + a1);
-                    mongocrypt_init = Marshal.GetDelegateForFunctionPointer<Delegates.mongocrypt_init>(a1);
-                    IntPtr a2 = DarwinLibray.dlsym(handle, "mongocrypt_version");
-                    Console.WriteLine("handle : " + a2);
-                    mongocrypt_version = Marshal.GetDelegateForFunctionPointer<Delegates.mongocrypt_version>(a2);
+                    _loader = new DarwinLibrary(path);
                 }
+
             }
 
-            public static readonly Delegates.mongocrypt_init mongocrypt_init;
-            public static readonly Delegates.mongocrypt_version mongocrypt_version;
+            public T getFunction<T>(string name)
+            {
+                IntPtr a2 = _loader.getFunction(name);
+                Console.WriteLine("_handle : " + a2);
+                return Marshal.GetDelegateForFunctionPointer<T>(a2);
 
-            public class Delegates {
-            public delegate void mongocrypt_init();
-            public delegate IntPtr mongocrypt_version();
             }
-            class DarwinLibray
+
+
+            interface SharedLibraryLoader
+            {
+                IntPtr getFunction(string name);
+            }
+
+            class DarwinLibrary : SharedLibraryLoader
             {
 
                 // See dlfcn.h
@@ -84,10 +90,29 @@ namespace MongoDB.MongoCrypt
                 public const int RTLD_GLOBAL = 0x8;
                 public const int RTLD_NOW = 0x2;
 
+                IntPtr _handle;
+                public DarwinLibrary(string path)
+                {
+
+                    _handle = dlopen(path, RTLD_GLOBAL | RTLD_NOW);
+                    Console.WriteLine("handle : " + _handle);
+                    if (_handle == IntPtr.Zero)
+                    {
+                        throw new NotImplementedException();
+                    }
+
+                }
+
+                public IntPtr getFunction(string name)
+                {
+                    return dlsym(_handle, name);
+                }
+
+
                 [DllImport("libdl")]
                 public static extern IntPtr dlopen(string filename, int flags);
 
-                [DllImport("libdl", CallingConvention = CallingConvention.Cdecl, CharSet =CharSet.Ansi)]
+                [DllImport("libdl", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
                 public static extern IntPtr dlsym(IntPtr handle, string symbol);
             }
         }

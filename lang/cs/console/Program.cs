@@ -9,7 +9,8 @@ namespace console
         {
             Console.WriteLine("Hello World!");
 
-            MongoDB.MongoCrypt.Stuff.Init();
+
+             Console.WriteLine("Version: " + Library.GetVersion());
         }
     }
 }
