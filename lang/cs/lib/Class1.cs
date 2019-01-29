@@ -51,9 +51,17 @@ namespace MongoDB.MongoCrypt
 
             SharedLibraryLoader _loader;
 //            static string path = "/Users/mark/src/libmongocrypt/debug/libmongocrypt.dylib";
-            static string path = "/home/mark/src/libmongocrypt/debug/libmongocrypt.so";
+//            static string path = "/home/mark/src/libmongocrypt/debug/libmongocrypt.so";
             public LibraryLoader()
             {
+
+                // PS - I hate .net standard 1.5,
+                // TODO We should use GetExecutingAssembly here
+                //var location = Assembly.GetExecutingAssembly().Location;
+                var assembly = typeof(LibraryLoader).GetTypeInfo().Assembly;
+                var location = assembly.Location;
+                string path = Path.GetDirectoryName(location);
+                Console.WriteLine("Base Path: "+ path);
 
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
@@ -65,6 +73,10 @@ namespace MongoDB.MongoCrypt
                 }
                 else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 {
+                    // Assembly executes from here: 
+                    // /home/mark/.nuget/packages/mongodb.crypt/1.0.0/lib/netstandard2.0
+                    path += "/../../native/linux/libmongocrypt.so";
+                    Console.WriteLine("Load path: " + path);
                     _loader = new LinuxLibrary(path);
                 }
 

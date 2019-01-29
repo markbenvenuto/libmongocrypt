@@ -4,4 +4,29 @@
     <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <AssemblyName>MongoDB.Crypt</AssemblyName>
+    <AssemblyTitle>MongoDB.Crypt</AssemblyTitle>
+    <Product>MongoDB.Crypt</Product>
+    <Company>MongoDB Inc.</Company>
+    <Copyright>Copyright © 2019-present MongoDB Inc.</Copyright>
+    <Description>Official MongoDB supported driver for MongoDB.  See http://www.mongodb.org/display/DOCS/CSharp+Language+Center for more details.</Description>
+    <Authors>markbenvenuto</Authors>
+    <PackageIconUrl>http://jobs.mongodb.org/files/logos/889002/889002.png</PackageIconUrl>
+    <!-- <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance> -->
+    <PackageDescription>Official .NET driver for MongoDB.</PackageDescription>
+    <PackageProjectUrl>http://www.mongodb.org/display/DOCS/CSharp+Language+Center</PackageProjectUrl>
+    <!-- <PackageLicenseFile>License.txt</PackageLicenseFile> -->
+    <PackageTags>mongodb;mongo;nosql</PackageTags>
+    <PackageLanguage>en-US</PackageLanguage>
+    <IncludeSymbols>true</IncludeSymbols>
+  </PropertyGroup>
+
+<ItemGroup>
+  <Content Include="/home/mark/src/libmongocrypt/debug/libmongocrypt.so">
+      <PackagePath>native/linux/libmongocrypt.so</PackagePath>
+      <Pack>true</Pack>
+    </Content>
+  </ItemGroup>
+
 </Project>
