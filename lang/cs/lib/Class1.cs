@@ -50,7 +50,8 @@ namespace MongoDB.MongoCrypt
         {
 
             SharedLibraryLoader _loader;
-            static string path = "/Users/mark/src/libmongocrypt/debug/libmongocrypt.dylib";
+//            static string path = "/Users/mark/src/libmongocrypt/debug/libmongocrypt.dylib";
+            static string path = "/home/mark/src/libmongocrypt/debug/libmongocrypt.so";
             public LibraryLoader()
             {
 
@@ -61,6 +62,10 @@ namespace MongoDB.MongoCrypt
                 else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
                 {
                     _loader = new DarwinLibrary(path);
+                }
+                else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                {
+                    _loader = new LinuxLibrary(path);
                 }
 
             }
@@ -92,6 +97,44 @@ namespace MongoDB.MongoCrypt
 
                 IntPtr _handle;
                 public DarwinLibrary(string path)
+                {
+
+                    _handle = dlopen(path, RTLD_GLOBAL | RTLD_NOW);
+                    Console.WriteLine("handle : " + _handle);
+                    if (_handle == IntPtr.Zero)
+                    {
+                        throw new NotImplementedException();
+                    }
+
+                }
+
+                public IntPtr getFunction(string name)
+                {
+                    return dlsym(_handle, name);
+                }
+
+
+                [DllImport("libdl")]
+                public static extern IntPtr dlopen(string filename, int flags);
+
+                [DllImport("libdl", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
+                public static extern IntPtr dlsym(IntPtr handle, string symbol);
+            }
+
+            
+            class LinuxLibrary : SharedLibraryLoader
+            {
+
+                // See dlfcn.h
+                // #define RTLD_LAZY       0x1
+                // #define RTLD_NOW        0x2
+                // #define RTLD_LOCAL      0x4
+                // #define RTLD_GLOBAL     0x100
+                public const int RTLD_GLOBAL = 0x100;
+                public const int RTLD_NOW = 0x2;
+
+                IntPtr _handle;
+                public LinuxLibrary(string path)
                 {
 
                     _handle = dlopen(path, RTLD_GLOBAL | RTLD_NOW);
