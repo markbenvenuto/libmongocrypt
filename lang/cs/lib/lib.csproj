@@ -20,10 +20,12 @@
     <PackageTags>mongodb;mongo;nosql</PackageTags>
     <PackageLanguage>en-US</PackageLanguage>
     <IncludeSymbols>true</IncludeSymbols>
+
   </PropertyGroup>
 
-<ItemGroup>
-  <Content Include="/home/mark/src/libmongocrypt/debug/libmongocrypt.so">
+  <ItemGroup>
+    <Content Include="../../../debug/libmongocrypt.so" Condition="'$(Configuration)'=='Debug'">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <PackagePath>native/linux/libmongocrypt.so</PackagePath>
       <Pack>true</Pack>
     </Content>

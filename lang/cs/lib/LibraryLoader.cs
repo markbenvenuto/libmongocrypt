@@ -10,8 +10,6 @@ using System.Diagnostics;
 
 namespace MongoDB.MongoCrypt
 {
-
-
     /*
      * Windows:
      * https://stackoverflow.com/questions/2864673/specify-the-search-path-for-dllimport-in-net
@@ -21,23 +19,21 @@ namespace MongoDB.MongoCrypt
      * https://github.com/dotnet/corefx/issues/32015
      *
      */
-
     internal class LibraryLoader
     {
-
         SharedLibraryLoader _loader;
-        //            static string path = "/Users/mark/src/libmongocrypt/debug/libmongocrypt.dylib";
-        //            static string path = "/home/mark/src/libmongocrypt/debug/libmongocrypt.so";
+
         public LibraryLoader()
         {
+            List<string> candidatePaths = new List<string>();
 
-            // PS - I hate .net standard 1.5,
-            // TODO We should use GetExecutingAssembly here
-            //var location = Assembly.GetExecutingAssembly().Location;
+            // In the nuget package, get the shared library from a relative path of this assembly
+            // Also, when running locally, get the shared library from a relative path of this assembly
             var assembly = typeof(LibraryLoader).GetTypeInfo().Assembly;
             var location = assembly.Location;
-            string path = Path.GetDirectoryName(location);
-            Console.WriteLine("Base Path: " + path);
+            string basepath = Path.GetDirectoryName(location);
+            candidatePaths.Add(basepath);
+            Console.WriteLine("Base Path: " + basepath);
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
@@ -45,17 +41,36 @@ namespace MongoDB.MongoCrypt
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
+                string[] suffixPaths = new []{
+                    "/../../native/osx/",
+                    ""};
+                    string path = FindLibrary(candidatePaths, suffixPaths, "libmongocrypt.dylib");
                 _loader = new DarwinLibrary(path);
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
                 // Assembly executes from here: 
                 // /home/mark/.nuget/packages/mongodb.crypt/1.0.0/lib/netstandard2.0
-                path += "/../../native/linux/libmongocrypt.so";
-                Console.WriteLine("Load path: " + path);
+                string[] suffixPaths = new []{
+                    "/../../native/linux/",
+                    ""};
+                    string path = FindLibrary(candidatePaths, suffixPaths, "libmongocrypt.so");
                 _loader = new LinuxLibrary(path);
             }
+        }
 
+        private string FindLibrary(IList<string> basePaths, string[] suffixPaths, string library) {
+            foreach(var basePath in basePaths) {
+                foreach(var suffix in suffixPaths) {
+                    string path = Path.Combine(basePath, suffix, library);
+                    if(File.Exists(path)) {
+                        Console.WriteLine("Load path: " + path);
+                        return path;
+                    }
+             }
+            }
+
+            throw new FileNotFoundException();
         }
 
         public T getFunction<T>(string name)

@@ -10,8 +10,6 @@ using System.Diagnostics;
 
 namespace MongoDB.MongoCrypt
 {
-
-
     /*
      * Windows:
      * https://stackoverflow.com/questions/2864673/specify-the-search-path-for-dllimport-in-net
