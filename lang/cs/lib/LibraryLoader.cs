@@ -37,37 +37,43 @@ namespace MongoDB.MongoCrypt
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                // TOD
+                string[] suffixPaths = new[]{
+                    "/../../native/windows/",
+                    ""};
+                string path = FindLibrary(candidatePaths, suffixPaths, "libmongocrypt.dll");
+                _loader = new WindowsLibrary(path);
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
-                string[] suffixPaths = new []{
+                string[] suffixPaths = new[]{
                     "/../../native/osx/",
                     ""};
-                    string path = FindLibrary(candidatePaths, suffixPaths, "libmongocrypt.dylib");
+                string path = FindLibrary(candidatePaths, suffixPaths, "libmongocrypt.dylib");
                 _loader = new DarwinLibrary(path);
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
-                // Assembly executes from here: 
-                // /home/mark/.nuget/packages/mongodb.crypt/1.0.0/lib/netstandard2.0
-                string[] suffixPaths = new []{
+                string[] suffixPaths = new[]{
                     "/../../native/linux/",
                     ""};
-                    string path = FindLibrary(candidatePaths, suffixPaths, "libmongocrypt.so");
+                string path = FindLibrary(candidatePaths, suffixPaths, "libmongocrypt.so");
                 _loader = new LinuxLibrary(path);
             }
         }
 
-        private string FindLibrary(IList<string> basePaths, string[] suffixPaths, string library) {
-            foreach(var basePath in basePaths) {
-                foreach(var suffix in suffixPaths) {
+        private string FindLibrary(IList<string> basePaths, string[] suffixPaths, string library)
+        {
+            foreach (var basePath in basePaths)
+            {
+                foreach (var suffix in suffixPaths)
+                {
                     string path = Path.Combine(basePath, suffix, library);
-                    if(File.Exists(path)) {
+                    if (File.Exists(path))
+                    {
                         Console.WriteLine("Load path: " + path);
                         return path;
                     }
-             }
+                }
             }
 
             throw new FileNotFoundException();
@@ -80,7 +86,6 @@ namespace MongoDB.MongoCrypt
             return Marshal.GetDelegateForFunctionPointer<T>(a2);
 
         }
-
 
         interface SharedLibraryLoader
         {
@@ -115,7 +120,6 @@ namespace MongoDB.MongoCrypt
             {
                 return dlsym(_handle, name);
             }
-
 
             [DllImport("libdl")]
             public static extern IntPtr dlopen(string filename, int flags);
@@ -154,12 +158,39 @@ namespace MongoDB.MongoCrypt
                 return dlsym(_handle, name);
             }
 
-
             [DllImport("libdl")]
             public static extern IntPtr dlopen(string filename, int flags);
 
             [DllImport("libdl", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
             public static extern IntPtr dlsym(IntPtr handle, string symbol);
+        }
+
+
+        class WindowsLibrary : SharedLibraryLoader
+        {
+            IntPtr _handle;
+            public WindowsLibrary(string path)
+            {
+
+                _handle = LoadLibrary(path);
+                Console.WriteLine("handle : " + _handle);
+                if (_handle == IntPtr.Zero)
+                {
+                    throw new NotImplementedException();
+                }
+
+            }
+
+            public IntPtr getFunction(string name)
+            {
+                return GetProcAddress(_handle, name);
+            }
+
+            [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Ansi)]
+            static extern IntPtr LoadLibrary([MarshalAs(UnmanagedType.LPStr)]string lpFileName);
+
+            [DllImport("kernel32", CharSet = CharSet.Ansi, ExactSpelling = true, SetLastError = true)]
+            static extern IntPtr GetProcAddress(IntPtr hModule, string procName);
         }
     }
 }

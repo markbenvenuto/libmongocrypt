@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFramework>netstandard1.6</TargetFramework>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -30,7 +30,7 @@
       <PackagePath>native/linux/libmongocrypt.so</PackagePath>
       <Pack>true</Pack>
     </Content>
-  
+
     <Content Include="../../../debug/libmongocrypt.dylib" Condition="'$(Configuration)'=='Debug' And Exists('../../../debug/libmongocrypt.dylib')">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <PackagePath>native/linux/libmongocrypt.so</PackagePath>
