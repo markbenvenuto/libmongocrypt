@@ -24,7 +24,14 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="../../../debug/libmongocrypt.so" Condition="'$(Configuration)'=='Debug'">
+
+    <Content Include="../../../debug/libmongocrypt.so" Condition="'$(Configuration)'=='Debug' And Exists('../../../debug/libmongocrypt.so')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <PackagePath>native/linux/libmongocrypt.so</PackagePath>
+      <Pack>true</Pack>
+    </Content>
+  
+    <Content Include="../../../debug/libmongocrypt.dylib" Condition="'$(Configuration)'=='Debug' And Exists('../../../debug/libmongocrypt.dylib')">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <PackagePath>native/linux/libmongocrypt.so</PackagePath>
       <Pack>true</Pack>
