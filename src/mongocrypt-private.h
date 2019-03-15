@@ -20,6 +20,7 @@
 #include "mongocrypt.h"
 #include "bson/bson.h"
 
+#include "mongocrypt-compat.h"
 #include "mongocrypt-log-private.h"
 #include "mongocrypt-buffer-private.h"
 #include "mongocrypt-key-cache-private.h"

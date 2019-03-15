@@ -17,6 +17,7 @@
 #include <bson/bson.h>
 
 #include "mongocrypt.h"
+#include "mongocrypt-private.h"
 #include "mongocrypt-binary-private.h"
 #include "mongocrypt-encryptor-private.h"
 #include "mongocrypt-key-broker-private.h"
@@ -354,7 +355,6 @@ _replace_marking_with_ciphertext (void *ctx,
    BSON_ASSERT (ctx);
    BSON_ASSERT (in);
    BSON_ASSERT (out);
-   BSON_ASSERT (status);
    kb = (mongocrypt_key_broker_t *) ctx;
    status = kb->status;
 
@@ -438,7 +438,7 @@ mongocrypt_encryptor_key_broker_done (mongocrypt_encryptor_t *encryptor)
    }
 
    encryptor->state = MONGOCRYPT_ENCRYPTOR_STATE_NEED_ENCRYPTION;
-done:
+/*done:*/
    return encryptor->state;
 }
 

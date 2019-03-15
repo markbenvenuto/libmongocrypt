@@ -66,6 +66,16 @@ else()
 endif()
 
 
+if ( MSVC )
+    # W4996 - POSIX name for this item is deprecated
+    set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} /W3 /wd4996 /D_CRT_SECURE_NO_WARNINGS /WX -Wno-missing-braces -Wno-unused-function")
+
+    check_c_compiler_flag( -Wno-unused-function FOO_BAR1)
+# else()
+#    set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -Wall -Werror")
+endif()
+
+
 # Define mongocrypt library
 add_library (mongocrypt SHARED ${MONGOCRYPT_SOURCES})
 target_include_directories (mongocrypt PRIVATE ${BSON_INCLUDE_DIRS})
