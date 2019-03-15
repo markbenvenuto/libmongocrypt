@@ -17,6 +17,7 @@
 #include <mongocrypt.h>
 
 #include "test-mongocrypt.h"
+#include "mongocrypt-crypto-private.h"
 
 static void
 _init_buffer_with_count (_mongocrypt_buffer_t *out, uint32_t count)
