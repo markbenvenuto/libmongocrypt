@@ -6,11 +6,12 @@
 #include <mongocrypt-binary-private.h>
 #include <mongocrypt-crypto-private.h>
 #include <mongocrypt-encryptor.h>
+#include <mongocrypt-encryptor-private.h>
+#include <mongocrypt-decryptor-private.h>
 #include <mongocrypt-key-broker.h>
 #include <mongocrypt-key-cache-private.h>
 #include <mongocrypt-log-private.h>
 #include <mongocrypt-private.h>
-
 
 #define ASSERT_OR_PRINT_MSG(_statement, msg)          \
    do {                                               \
@@ -162,9 +163,9 @@ _test_roundtrip (void)
 static void
 _init_buffer (_mongocrypt_buffer_t *out, const char *hex_string)
 {
-   int i;
+   uint32_t i;
 
-   out->len = strlen (hex_string) / 2;
+   out->len = (uint32_t) strlen (hex_string) / 2;
    out->data = bson_malloc (out->len);
    out->owned = true;
    for (i = 0; i < out->len; i++) {
@@ -302,15 +303,12 @@ _load_json_from_file (mongocrypt_t *crypt, const char *path)
 static mongocrypt_binary_t *
 _load_http_from_file (mongocrypt_t *crypt, const char *path)
 {
-   bson_error_t error;
    int fd;
-   bool ret;
    char *out;
    mongocrypt_binary_t *to_return;
    int n_read;
    int filesize;
    char buf[512];
-   int slen;
    int i;
 
    filesize = 0;
@@ -462,26 +460,26 @@ _test_random_generator (void)
 {
    _mongocrypt_buffer_t out;
    mongocrypt_status_t *status;
-   uint32_t count = 32;
-   int mid = count / 2;
-   char zero[count];
+#define RANDOM_LEN 32
+   int mid = RANDOM_LEN / 2;
+   char zero[RANDOM_LEN];
 
    /* _mongocrypt_random handles the case where the count size is greater
     * than the buffer by throwing an error. Because of that, no additional tests
     * for this case is needed here. */
 
-   memset (zero, 0, count);
+   memset (zero, 0, RANDOM_LEN);
    status = mongocrypt_status_new ();
-   _init_buffer_with_count (&out, count);
+   _init_buffer_with_count (&out, RANDOM_LEN);
 
-   BSON_ASSERT (_mongocrypt_random (&out, status, count));
-   BSON_ASSERT (0 != memcmp (zero, out.data, count)); /* initialized */
+   BSON_ASSERT (_mongocrypt_random (&out, status, RANDOM_LEN));
+   BSON_ASSERT (0 != memcmp (zero, out.data, RANDOM_LEN)); /* initialized */
 
    mongocrypt_status_destroy (status);
    _mongocrypt_buffer_cleanup (&out);
 
    status = mongocrypt_status_new ();
-   _init_buffer_with_count (&out, count);
+   _init_buffer_with_count (&out, RANDOM_LEN);
 
    BSON_ASSERT (_mongocrypt_random (&out, status, mid));
    BSON_ASSERT (0 != memcmp (zero, out.data, mid));       /* initialized */

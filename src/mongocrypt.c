@@ -93,7 +93,7 @@ const char *
 tmp_buf (const _mongocrypt_buffer_t *buf)
 {
    static char storage[1024];
-   int i, n;
+   uint32_t i, n;
 
    memset (storage, 0, 1024);
    /* capped at two characters per byte, minus 1 for trailing \0 */
@@ -114,8 +114,6 @@ void _mongocrypt_do_init(void)
 {
    kms_message_init ();
 }
-
-
 mongocrypt_t *
 mongocrypt_new (const mongocrypt_opts_t *opts, mongocrypt_status_t *status)
 {
@@ -134,7 +132,7 @@ mongocrypt_new (const mongocrypt_opts_t *opts, mongocrypt_status_t *status)
    crypt->schema_cache = _mongocrypt_schema_cache_new ();
    success = true;
 
-fail:
+/*fail:*/
    if (!success) {
       mongocrypt_destroy (crypt);
       crypt = NULL;

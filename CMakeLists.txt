@@ -60,6 +60,14 @@ else()
 endif()
 
 
+if ( MSVC )
+    # W4996 - POSIX name for this item is deprecated
+    set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} /W3 /wd4996 /D_CRT_SECURE_NO_WARNINGS /WX")
+# else()
+#    set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -Wall -Werror")
+endif()
+
+
 # Define mongocrypt library
 add_library (mongocrypt SHARED ${MONGOCRYPT_SOURCES})
 target_include_directories (mongocrypt PRIVATE ${BSON_STATIC_INCLUDE_DIRS})

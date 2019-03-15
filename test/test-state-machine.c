@@ -115,6 +115,7 @@ _auto_encrypt (mongocrypt_t *crypt)
    collection_info = NULL;
    encryptor = mongocrypt_encryptor_new (crypt);
    status = mongocrypt_status_new ();
+   state = MONGOCRYPT_ENCRYPTOR_STATE_NEED_NS;
 
    state = mongocrypt_encryptor_state (encryptor);
 

@@ -354,7 +354,6 @@ _replace_marking_with_ciphertext (void *ctx,
    BSON_ASSERT (ctx);
    BSON_ASSERT (in);
    BSON_ASSERT (out);
-   BSON_ASSERT (status);
    kb = (mongocrypt_key_broker_t *) ctx;
    status = kb->status;
 
@@ -438,7 +437,7 @@ mongocrypt_encryptor_key_broker_done (mongocrypt_encryptor_t *encryptor)
    }
 
    encryptor->state = MONGOCRYPT_ENCRYPTOR_STATE_NEED_ENCRYPTION;
-done:
+/*done:*/
    return encryptor->state;
 }
 
