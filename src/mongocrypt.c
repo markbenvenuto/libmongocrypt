@@ -21,6 +21,7 @@
 #include "mongocrypt-crypto-private.h"
 #include "mongocrypt-private.h"
 #include "mongocrypt-opts-private.h"
+#include "mongocrypt-os-private.h"
 #include "mongocrypt-schema-cache-private.h"
 #include "mongocrypt-status-private.h"
 #include "mongocrypt-log-private.h"
@@ -109,7 +110,7 @@ tmp_buf (const _mongocrypt_buffer_t *buf)
 }
 
 
-MONGOCRYPT_ONCE_FUNC (_mongocrypt_do_init)
+void _mongocrypt_do_init(void)
 {
    kms_message_init ();
 }
@@ -121,7 +122,11 @@ mongocrypt_new (const mongocrypt_opts_t *opts, mongocrypt_status_t *status)
    mongocrypt_t *crypt = NULL;
    bool success = false;
 
-   _mongocrypt_do_init ();
+   success = _mongocrypt_once (_mongocrypt_do_init) == 0;
+   if (!success) {
+      goto fail;
+   }
+
    crypt = bson_malloc0 (sizeof (mongocrypt_t));
    crypt->opts = mongocrypt_opts_copy (opts);
    mongocrypt_mutex_init (&crypt->mutex);
