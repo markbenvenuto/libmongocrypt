@@ -53,6 +53,19 @@ set (MONGOCRYPT_SOURCES
    src/mongocrypt-status.c
    )
 
+if (WIN32)
+   list(APPEND MONGOCRYPT_SOURCES
+      src/os_win/os_mutex.c
+      src/os_win/os_once.c
+   )
+else()
+   list(APPEND MONGOCRYPT_SOURCES
+      src/os_posix/os_mutex.c
+      src/os_posix/os_once.c
+   )
+endif()
+
+
 # Define mongocrypt library
 add_library (mongocrypt SHARED ${MONGOCRYPT_SOURCES})
 target_include_directories (mongocrypt PRIVATE ${BSON_INCLUDE_DIRS})

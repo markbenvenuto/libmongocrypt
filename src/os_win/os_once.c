@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-present MongoDB, Inc.
+ * Copyright 2019-present MongoDB, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,24 +14,30 @@
  * limitations under the License.
  */
 
-#ifndef MONGOCRYPT_MUTEX_PRIVATE_H
-#define MONGOCRYPT_MUTEX_PRIVATE_H
-
 #include <bson/bson.h>
 
-#if defined(BSON_OS_UNIX)
-#include <pthread.h>
-#define mongocrypt_mutex_t pthread_mutex_t
-#else
-#define mongocrypt_mutex_t CRITICAL_SECTION
-#endif
+#include "../mongocrypt-os-private.h"
 
-void _mongocrypt_mutex_init(mongocrypt_mutex_t* mutex);
+static INIT_ONCE once_control = INIT_ONCE_STATIC_INIT;
 
-void _mongocrypt_mutex_destroy(mongocrypt_mutex_t* mutex);
+static BOOL __cdecl _mongocrypt_init_once_callback(
+    _Inout_      PINIT_ONCE InitOnce,
+    _Inout_opt_  PVOID Parameter,
+    _Out_opt_    PVOID *Context
+    )
+{
+	void(*init_routine)(void) = Parameter;
 
-void _mongocrypt_mutex_lock(mongocrypt_mutex_t* mutex);
+	init_routine();
 
-void _mongocrypt_mutex_unlock(mongocrypt_mutex_t* mutex);
+	return (TRUE);
+}
 
-#endif /* MONGOCRYPT_MUTEX_PRIVATE_H */
+int
+_mongocrypt_once(void (*init_routine)(void))
+{
+	PVOID lpContext = NULL;
+
+	return !InitOnceExecuteOnce(&once_control, &_mongocrypt_init_once_callback,
+	    init_routine, lpContext);
+}
