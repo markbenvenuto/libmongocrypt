@@ -132,7 +132,7 @@ mongocrypt_new (const mongocrypt_opts_t *opts, mongocrypt_status_t *status)
    crypt->schema_cache = _mongocrypt_schema_cache_new ();
    success = true;
 
-/*fail:*/
+fail:
    if (!success) {
       mongocrypt_destroy (crypt);
       crypt = NULL;

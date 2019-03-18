@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include "../mongocrypt-os-private.h"
-
 #include <pthread.h>
+
+#include "../mongocrypt-os-private.h"
 
 static pthread_once_t once_control = PTHREAD_ONCE_INIT;
 
