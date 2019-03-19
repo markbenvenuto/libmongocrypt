@@ -14,30 +14,20 @@
  * limitations under the License.
  */
 
-#include <bson/bson.h>
+#include "../mongocrypt-mutex-private.h"
 
-#include "../mongocrypt-os-private.h"
-
-static INIT_ONCE once_control = INIT_ONCE_STATIC_INIT;
-
-static BOOL __cdecl _mongocrypt_init_once_callback(
-    _Inout_      PINIT_ONCE InitOnce,
-    _Inout_opt_  PVOID Parameter,
-    _Out_opt_    PVOID *Context
-    )
-{
-	void(*init_routine)(void) = Parameter;
-
-	init_routine();
-
-	return (TRUE);
+void _mongocrypt_mutex_init(mongocrypt_mutex_t* mutex) {
+    InitializeCriticalSection(mutex);
 }
 
-int
-_mongocrypt_once(void (*init_routine)(void))
-{
-	PVOID lpContext = NULL;
+void _mongocrypt_mutex_destroy(mongocrypt_mutex_t* mutex) {
+    DeleteCriticalSection(mutex);
+}
 
-	return !InitOnceExecuteOnce(&once_control, &_mongocrypt_init_once_callback,
-	    init_routine, lpContext);
+void _mongocrypt_mutex_lock(mongocrypt_mutex_t* mutex) {
+    EnterCriticalSection(mutex);
+}
+
+void _mongocrypt_mutex_unlock(mongocrypt_mutex_t* mutex) {
+    LeaveCriticalSection(mutex);
 }

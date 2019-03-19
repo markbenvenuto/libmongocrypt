@@ -127,7 +127,7 @@ mongocrypt_new (const mongocrypt_opts_t *opts, mongocrypt_status_t *status)
 
    crypt = bson_malloc0 (sizeof (mongocrypt_t));
    crypt->opts = mongocrypt_opts_copy (opts);
-   mongocrypt_mutex_init (&crypt->mutex);
+   _mongocrypt_mutex_init (&crypt->mutex);
    _mongocrypt_log_init (&crypt->log, opts);
    crypt->schema_cache = _mongocrypt_schema_cache_new ();
    success = true;
@@ -150,7 +150,7 @@ mongocrypt_destroy (mongocrypt_t *crypt)
    mongocrypt_opts_destroy (crypt->opts);
    _mongocrypt_schema_cache_destroy (crypt->schema_cache);
    _mongocrypt_key_cache_destroy (crypt->key_cache);
-   mongocrypt_mutex_destroy (&crypt->mutex);
+   _mongocrypt_mutex_destroy (&crypt->mutex);
    _mongocrypt_log_cleanup (&crypt->log);
    bson_free (crypt);
 }

@@ -21,18 +21,17 @@
 
 #if defined(BSON_OS_UNIX)
 #include <pthread.h>
-#define mongocrypt_mutex_destroy pthread_mutex_destroy
-#define mongocrypt_mutex_init(_n) pthread_mutex_init ((_n), NULL)
-#define mongocrypt_mutex_lock pthread_mutex_lock
 #define mongocrypt_mutex_t pthread_mutex_t
-#define mongocrypt_mutex_unlock pthread_mutex_unlock
 #else
-#define mongocrypt_mutex_destroy DeleteCriticalSection
-#define mongocrypt_mutex_init InitializeCriticalSection
-#define mongocrypt_mutex_lock EnterCriticalSection
 #define mongocrypt_mutex_t CRITICAL_SECTION
-#define mongocrypt_mutex_unlock LeaveCriticalSection
 #endif
 
+void _mongocrypt_mutex_init(mongocrypt_mutex_t* mutex);
+
+void _mongocrypt_mutex_destroy(mongocrypt_mutex_t* mutex);
+
+void _mongocrypt_mutex_lock(mongocrypt_mutex_t* mutex);
+
+void _mongocrypt_mutex_unlock(mongocrypt_mutex_t* mutex);
 
 #endif /* MONGOCRYPT_MUTEX_PRIVATE_H */
