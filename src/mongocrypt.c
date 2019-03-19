@@ -109,18 +109,18 @@ tmp_buf (const _mongocrypt_buffer_t *buf)
    return (const char *) storage;
 }
 
-
 void _mongocrypt_do_init(void)
 {
    kms_message_init ();
 }
+
 mongocrypt_t *
 mongocrypt_new (const mongocrypt_opts_t *opts, mongocrypt_status_t *status)
 {
    mongocrypt_t *crypt = NULL;
    bool success = false;
 
-   if (0 != _mongocrypt_once (_mongocrypt_do_init))
+   if (0 != _mongocrypt_once (_mongocrypt_do_init)) {
       goto fail;
    }
 
