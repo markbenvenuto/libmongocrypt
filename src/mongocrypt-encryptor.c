@@ -149,12 +149,8 @@ mongocrypt_encryptor_add_collection_info (
       }
    }
 
-   if (validator_has_siblings) {
-      encryptor->state = MONGOCRYPT_ENCRYPTOR_STATE_ERROR;
-      CLIENT_ERR (
-         "More then one jsonSchema provided.");
-      return encryptor->state;
-   }
+   /* TODO quiet warning */
+   (void) validator_has_siblings;
 
    if (found_schema) {
       encryptor->state = MONGOCRYPT_ENCRYPTOR_STATE_NEED_MARKINGS;
@@ -445,7 +441,6 @@ mongocrypt_encryptor_key_broker_done (mongocrypt_encryptor_t *encryptor)
    }
 
    encryptor->state = MONGOCRYPT_ENCRYPTOR_STATE_NEED_ENCRYPTION;
-/*done:*/
    return encryptor->state;
 }
 
