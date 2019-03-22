@@ -9,7 +9,8 @@ namespace console
         {
             Console.WriteLine("Hello World!");
 
-             Console.WriteLine("Version: " + Library.Version());
+            throw new NotImplementedException();
+            // Console.WriteLine("Version: " + Library.Version);
         }
     }
 }

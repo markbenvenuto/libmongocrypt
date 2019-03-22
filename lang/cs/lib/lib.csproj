@@ -1,7 +1,8 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netstandard1.6</TargetFramework>
+    <Platforms>x64</Platforms>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -21,19 +22,23 @@
     <PackageLanguage>en-US</PackageLanguage>
     <IncludeSymbols>true</IncludeSymbols>
 
+    <MDBDeveloperDirectory>../../../build/Debug</MDBDeveloperDirectory>
   </PropertyGroup>
 
   <ItemGroup>
 
-    <Content Include="../../../debug/libmongocrypt.so" Condition="'$(Configuration)'=='Debug' And Exists('../../../debug/libmongocrypt.so')">
+    <Content Include="$(MDBDeveloperDirectory)/libmongocrypt.so" Condition="'$(Configuration)'=='Debug' And Exists('$(MDBDeveloperDirectory)/libmongocrypt.so')">
+      <Link>libmongocrypt.so</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
 
-    <Content Include="../../../debug/libmongocrypt.dylib" Condition="'$(Configuration)'=='Debug' And Exists('../../../debug/libmongocrypt.dylib')">
+    <Content Include="$(MDBDeveloperDirectory)/libmongocrypt.dylib" Condition="'$(Configuration)'=='Debug' And Exists('$(MDBDeveloperDirectory)/libmongocrypt.dylib')">
+      <Link>libmongocrypt.dylib</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
 
-    <Content Include="../../../debug/libmongocrypt.dll" Condition="'$(Configuration)'=='Debug' And Exists('../../../debug/libmongocrypt.dll')">
+    <Content Include="$(MDBDeveloperDirectory)/mongocrypt.dll" Condition="'$(Configuration)'=='Debug' And Exists('$(MDBDeveloperDirectory)/mongocrypt.dll')">
+      <Link>mongocrypt.dll</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

@@ -38,15 +38,15 @@ namespace MongoDB.MongoCrypt
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 string[] suffixPaths = new[]{
-                    "/../../native/windows/",
+                    @"..\..\native\windows\",
                     ""};
-                string path = FindLibrary(candidatePaths, suffixPaths, "libmongocrypt.dll");
+                string path = FindLibrary(candidatePaths, suffixPaths, "mongocrypt.dll");
                 _loader = new WindowsLibrary(path);
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
                 string[] suffixPaths = new[]{
-                    "/../../native/osx/",
+                    "../../native/osx/",
                     ""};
                 string path = FindLibrary(candidatePaths, suffixPaths, "libmongocrypt.dylib");
                 _loader = new DarwinLibrary(path);
@@ -54,7 +54,7 @@ namespace MongoDB.MongoCrypt
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
                 string[] suffixPaths = new[]{
-                    "/../../native/linux/",
+                    "../../native/linux/",
                     ""};
                 string path = FindLibrary(candidatePaths, suffixPaths, "libmongocrypt.so");
                 _loader = new LinuxLibrary(path);
@@ -176,6 +176,7 @@ namespace MongoDB.MongoCrypt
                 Console.WriteLine("handle : " + _handle);
                 if (_handle == IntPtr.Zero)
                 {
+                    //Marshal.GetLastWin32Error();
                     throw new NotImplementedException();
                 }
 

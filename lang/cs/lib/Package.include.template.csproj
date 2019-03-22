@@ -1,12 +1,12 @@
 <Project>
-<PropertyGroup>
-    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
-</PropertyGroup>
+  <PropertyGroup>
+      <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
 
   <ItemGroup>
     <Compile Include="@CMAKE_CURRENT_LIST_DIR@/lib/*.cs" />
   </ItemGroup>
-    
+
   <ItemGroup>
 
     <Content Include="@mongocrypt_BINARY_DIR@/libmongocrypt.so" Condition="Exists('@mongocrypt_BINARY_DIR@/libmongocrypt.so')">
