@@ -82,6 +82,37 @@ namespace MongoDB.MongoCrypt
         }
     }
 
+    internal class StatusSafeHandle : SafeHandle
+    {
+        private StatusSafeHandle()
+            : base(IntPtr.Zero, true)
+        {
+        }
+
+        public override bool IsInvalid
+        {
+            get
+            {
+                return this.handle == IntPtr.Zero;
+            }
+        }
+
+        // TODO: This is .NET Standard >= 2.0
+        //[ReliabilityContract(Consistency.WillNotCorruptState, Cer.MayFail)]
+        protected override bool ReleaseHandle()
+        {
+            // Here, we must obey all rules for constrained execution regions.
+            Library.mongocrypt_status_destroy(this.handle);
+            return true;
+            // If ReleaseHandle failed, it can be reported via the
+            // "releaseHandleFailed" managed debugging assistant (MDA).  This
+            // MDA is disabled by default, but can be enabled in a debugger
+            // or during testing to diagnose handle corruption problems.
+            // We do not throw an exception because most code could not recover
+            // from the problem.
+        }
+    }
+
 
     public class CryptContext
     {
@@ -182,6 +213,58 @@ namespace MongoDB.MongoCrypt
         private OptionsSafeHandle _handle;
     }
 
+    public class CryptException : Exception
+    {
+        public CryptException(Int32 code, string message) : base(message)
+        {
+            _code = code;
+        }
+
+        private Int32 _code;
+    }
+
+    public class Status : IDisposable
+    {
+        public Status()
+        {
+            _handle = Library.mongocrypt_status_new();
+        }
+
+        void throwExceptionIfNeeded()
+        {
+            if (!Library.mongocrypt_status_ok(_handle))
+            {
+                var errorType = Library.mongocrypt_status_error_type(_handle);
+                var statusCode = Library.mongocrypt_status_code(_handle);
+
+                IntPtr msgPtr = Library.mongocrypt_status_message(_handle);
+                var message = Marshal.PtrToStringAnsi(msgPtr);
+
+                throw new CryptException(statusCode, message);
+            }
+        }
+
+    internal StatusSafeHandle Handle => _handle;
+
+        #region IDisposable
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_handle.IsClosed)
+            {
+                _handle.Dispose();
+            }
+        }
+        #endregion
+
+        private StatusSafeHandle _handle;
+    }
+
     public class CryptClientFactory
     {
         public static CryptClient Create(CryptOptions options)
@@ -215,6 +298,14 @@ namespace MongoDB.MongoCrypt
             mongocrypt_opts_new = loader.getFunction<Delegates.mongocrypt_opts_new>("mongocrypt_opts_new");
             mongocrypt_opts_destroy = loader.getFunction<Delegates.mongocrypt_opts_destroy>("mongocrypt_opts_destroy");
             mongocrypt_opts_set_opt = loader.getFunction<Delegates.mongocrypt_opts_set_opt>("mongocrypt_opts_set_opt");
+
+            mongocrypt_status_new = loader.getFunction<Delegates.mongocrypt_status_new>("mongocrypt_status_new");
+            mongocrypt_status_destroy = loader.getFunction<Delegates.mongocrypt_status_destroy>("mongocrypt_status_destroy");
+            mongocrypt_status_error_type = loader.getFunction<Delegates.mongocrypt_status_error_type>("mongocrypt_status_error_type");
+            mongocrypt_status_code = loader.getFunction<Delegates.mongocrypt_status_code>("mongocrypt_status_code");
+            mongocrypt_status_message = loader.getFunction<Delegates.mongocrypt_status_message>("mongocrypt_status_message");
+            mongocrypt_status_ok = loader.getFunction<Delegates.mongocrypt_status_ok>("mongocrypt_status_ok");
+
         }
 
         public static string Version
@@ -234,6 +325,14 @@ namespace MongoDB.MongoCrypt
         internal static readonly Delegates.mongocrypt_opts_destroy mongocrypt_opts_destroy;
         internal static readonly Delegates.mongocrypt_opts_set_opt mongocrypt_opts_set_opt;
 
+        internal static readonly Delegates.mongocrypt_status_new mongocrypt_status_new;
+        internal static readonly Delegates.mongocrypt_status_destroy mongocrypt_status_destroy;
+
+        internal static readonly Delegates.mongocrypt_status_error_type mongocrypt_status_error_type;
+        internal static readonly Delegates.mongocrypt_status_code mongocrypt_status_code;
+        internal static readonly Delegates.mongocrypt_status_message mongocrypt_status_message;
+        internal static readonly Delegates.mongocrypt_status_ok mongocrypt_status_ok;
+
         internal enum Options
         {
             MONGOCRYPT_AWS_REGION,
@@ -241,6 +340,13 @@ namespace MongoDB.MongoCrypt
             MONGOCRYPT_AWS_ACCESS_KEY_ID,
             MONGOCRYPT_LOG_FN,
             MONGOCRYPT_LOG_CTX
+        }
+
+        internal enum ErrorType {
+            MONGOCRYPT_ERROR_TYPE_NONE = 0,
+            MONGOCRYPT_ERROR_TYPE_MONGOCRYPTD,
+            MONGOCRYPT_ERROR_TYPE_KMS,
+            MONGOCRYPT_ERROR_TYPE_CLIENT
         }
 
         internal class Delegates
@@ -253,6 +359,13 @@ namespace MongoDB.MongoCrypt
             public delegate OptionsSafeHandle mongocrypt_opts_new();
             public delegate void mongocrypt_opts_destroy(IntPtr ptr);
             public delegate void mongocrypt_opts_set_opt(OptionsSafeHandle ptr, Options opts, IntPtr value);
+
+            public delegate StatusSafeHandle mongocrypt_status_new();
+            public delegate void mongocrypt_status_destroy(IntPtr ptr);
+            public delegate ErrorType mongocrypt_status_error_type(StatusSafeHandle ptr);
+            public delegate Int32 mongocrypt_status_code(StatusSafeHandle ptr);
+            public delegate IntPtr mongocrypt_status_message(StatusSafeHandle ptr);
+            public delegate bool mongocrypt_status_ok(StatusSafeHandle ptr);
 
         }
     }

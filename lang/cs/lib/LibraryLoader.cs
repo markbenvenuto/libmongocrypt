@@ -33,7 +33,8 @@ namespace MongoDB.MongoCrypt
             var location = assembly.Location;
             string basepath = Path.GetDirectoryName(location);
             candidatePaths.Add(basepath);
-            Console.WriteLine("Base Path: " + basepath);
+            // TODO - .NET Standard 2.0
+//            Trace.WriteLine("Base Path: " + basepath)
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
@@ -70,26 +71,36 @@ namespace MongoDB.MongoCrypt
                     string path = Path.Combine(basePath, suffix, library);
                     if (File.Exists(path))
                     {
-                        Console.WriteLine("Load path: " + path);
+                        // TODO - .NET Standard 2.0
+                        //Trace.WriteLine("Load path: " + path);
                         return path;
                     }
                 }
             }
 
-            throw new FileNotFoundException();
+            throw new FileNotFoundException("Could not find: " + library);
         }
 
         public T getFunction<T>(string name)
         {
-            IntPtr a2 = _loader.getFunction(name);
-            Console.WriteLine("_handle : " + a2);
-            return Marshal.GetDelegateForFunctionPointer<T>(a2);
+            IntPtr ptr = _loader.getFunction(name);
+            if(ptr != IntPtr.Zero)
+            {
+                throw new FunctionNotFoundException(name);
+            }
+
+            return Marshal.GetDelegateForFunctionPointer<T>(ptr);
 
         }
 
         interface SharedLibraryLoader
         {
             IntPtr getFunction(string name);
+        }
+
+        public class FunctionNotFoundException : Exception
+        {
+            public FunctionNotFoundException(string message) : base(message) { }
         }
 
         class DarwinLibrary : SharedLibraryLoader
@@ -108,10 +119,9 @@ namespace MongoDB.MongoCrypt
             {
 
                 _handle = dlopen(path, RTLD_GLOBAL | RTLD_NOW);
-                Console.WriteLine("handle : " + _handle);
                 if (_handle == IntPtr.Zero)
                 {
-                    throw new NotImplementedException();
+                    throw new FileNotFoundException(path);
                 }
 
             }
@@ -145,10 +155,9 @@ namespace MongoDB.MongoCrypt
             {
 
                 _handle = dlopen(path, RTLD_GLOBAL | RTLD_NOW);
-                Console.WriteLine("handle : " + _handle);
                 if (_handle == IntPtr.Zero)
                 {
-                    throw new NotImplementedException();
+                    throw new FileNotFoundException(path);
                 }
 
             }
@@ -173,11 +182,10 @@ namespace MongoDB.MongoCrypt
             {
 
                 _handle = LoadLibrary(path);
-                Console.WriteLine("handle : " + _handle);
                 if (_handle == IntPtr.Zero)
                 {
                     //Marshal.GetLastWin32Error();
-                    throw new NotImplementedException();
+                    throw new FileNotFoundException(path);
                 }
 
             }
