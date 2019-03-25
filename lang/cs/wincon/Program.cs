@@ -14,6 +14,18 @@ namespace wincon
             Console.WriteLine("Hello World!");
 
             Console.WriteLine("Version: " + Library.Version);
+
+            using (CryptOptions options = new CryptOptions())
+            {
+                options.AwsRegion = "us-east-1";
+                options.AwsSecretAccessKey = "us-east-1";
+                options.AwsAccessKeyId = "us-east-1";
+
+                using (var foo = MongoDB.MongoCrypt.CryptClientFactory.Create(options))
+                {
+                    foo.Foo();
+                }
+            }
         }
     }
 }
