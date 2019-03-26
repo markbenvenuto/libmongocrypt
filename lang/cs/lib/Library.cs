@@ -215,12 +215,16 @@ namespace MongoDB.MongoCrypt
 
     public class CryptException : Exception
     {
-        public CryptException(Int32 code, string message) : base(message)
+        internal CryptException(Library.ErrorType errorType, Int32 code, string message) : base(message)
         {
             _code = code;
+            _errorType = errorType;
         }
 
+        // TODO - expose codes
+
         private Int32 _code;
+        private Library.ErrorType _errorType;
     }
 
     public class Status : IDisposable
@@ -240,7 +244,7 @@ namespace MongoDB.MongoCrypt
                 IntPtr msgPtr = Library.mongocrypt_status_message(_handle);
                 var message = Marshal.PtrToStringAnsi(msgPtr);
 
-                throw new CryptException(statusCode, message);
+                throw new CryptException(errorType, statusCode, message);
             }
         }
 
