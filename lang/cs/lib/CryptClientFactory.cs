@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright 2018-present MongoDB, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,32 +16,30 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
-using MongoDB.Crypt;
+using System.Diagnostics;
 
-namespace wincon
+using System.Security;
+using System.Threading;
+//using System.Runtime.ConstrainedExecution;
+
+
+//using System.Security.Permissions;
+
+namespace MongoDB.Crypt
 {
-    class Program
+    public class CryptClientFactory
     {
-        static void Main(string[] args)
+        public static CryptClient Create(CryptOptions options)
         {
-            Console.WriteLine("Hello World!");
+            MongoCryptSafeHandle handle = Library.mongocrypt_new(options.Handle);
 
-            Console.WriteLine("Version: " + Library.Version);
-
-            using (CryptOptions options = new CryptOptions())
-            {
-                options.AwsRegion = "us-east-1";
-                options.AwsSecretAccessKey = "us-east-1";
-                options.AwsAccessKeyId = "us-east-1";
-
-                using (var foo = CryptClientFactory.Create(options))
-                {
-                    foo.Foo();
-                }
-            }
+            return new CryptClient(handle);
         }
     }
 }

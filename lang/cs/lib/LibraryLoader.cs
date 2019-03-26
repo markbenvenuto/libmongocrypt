@@ -31,12 +31,12 @@ namespace MongoDB.Crypt
 
         public LibraryLoader()
         {
- // Windows:
- // https://stackoverflow.com/questions/2864673/specify-the-search-path-for-dllimport-in-net
- //
- // See for better ways
- // https://github.com/dotnet/coreclr/issues/930
- // https://github.com/dotnet/corefx/issues/32015
+            // Windows:
+            // https://stackoverflow.com/questions/2864673/specify-the-search-path-for-dllimport-in-net
+            //
+            // See for better ways
+            // https://github.com/dotnet/coreclr/issues/930
+            // https://github.com/dotnet/corefx/issues/32015
             List<string> candidatePaths = new List<string>();
 
             // In the nuget package, get the shared library from a relative path of this assembly
