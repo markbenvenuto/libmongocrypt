@@ -15,21 +15,7 @@
  */
 
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
-using System.Diagnostics;
-
-using System.Security;
-using System.Threading;
-//using System.Runtime.ConstrainedExecution;
-
-
-//using System.Security.Permissions;
 
 namespace MongoDB.Crypt
 {
@@ -45,21 +31,21 @@ namespace MongoDB.Crypt
         {
             LibraryLoader loader = new LibraryLoader();
 
-            mongocrypt_version = loader.getFunction<Delegates.mongocrypt_version>("mongocrypt_version");
+            mongocrypt_version = loader.GetFunction<Delegates.mongocrypt_version>("mongocrypt_version");
 
-            mongocrypt_new = loader.getFunction<Delegates.mongocrypt_new>("mongocrypt_new");
-            mongocrypt_destroy = loader.getFunction<Delegates.mongocrypt_destroy>("mongocrypt_destroy");
+            mongocrypt_new = loader.GetFunction<Delegates.mongocrypt_new>("mongocrypt_new");
+            mongocrypt_destroy = loader.GetFunction<Delegates.mongocrypt_destroy>("mongocrypt_destroy");
 
-            mongocrypt_opts_new = loader.getFunction<Delegates.mongocrypt_opts_new>("mongocrypt_opts_new");
-            mongocrypt_opts_destroy = loader.getFunction<Delegates.mongocrypt_opts_destroy>("mongocrypt_opts_destroy");
-            mongocrypt_opts_set_opt = loader.getFunction<Delegates.mongocrypt_opts_set_opt>("mongocrypt_opts_set_opt");
+            mongocrypt_opts_new = loader.GetFunction<Delegates.mongocrypt_opts_new>("mongocrypt_opts_new");
+            mongocrypt_opts_destroy = loader.GetFunction<Delegates.mongocrypt_opts_destroy>("mongocrypt_opts_destroy");
+            mongocrypt_opts_set_opt = loader.GetFunction<Delegates.mongocrypt_opts_set_opt>("mongocrypt_opts_set_opt");
 
-            mongocrypt_status_new = loader.getFunction<Delegates.mongocrypt_status_new>("mongocrypt_status_new");
-            mongocrypt_status_destroy = loader.getFunction<Delegates.mongocrypt_status_destroy>("mongocrypt_status_destroy");
-            mongocrypt_status_error_type = loader.getFunction<Delegates.mongocrypt_status_error_type>("mongocrypt_status_error_type");
-            mongocrypt_status_code = loader.getFunction<Delegates.mongocrypt_status_code>("mongocrypt_status_code");
-            mongocrypt_status_message = loader.getFunction<Delegates.mongocrypt_status_message>("mongocrypt_status_message");
-            mongocrypt_status_ok = loader.getFunction<Delegates.mongocrypt_status_ok>("mongocrypt_status_ok");
+            mongocrypt_status_new = loader.GetFunction<Delegates.mongocrypt_status_new>("mongocrypt_status_new");
+            mongocrypt_status_destroy = loader.GetFunction<Delegates.mongocrypt_status_destroy>("mongocrypt_status_destroy");
+            mongocrypt_status_error_type = loader.GetFunction<Delegates.mongocrypt_status_error_type>("mongocrypt_status_error_type");
+            mongocrypt_status_code = loader.GetFunction<Delegates.mongocrypt_status_code>("mongocrypt_status_code");
+            mongocrypt_status_message = loader.GetFunction<Delegates.mongocrypt_status_message>("mongocrypt_status_message");
+            mongocrypt_status_ok = loader.GetFunction<Delegates.mongocrypt_status_ok>("mongocrypt_status_ok");
 
         }
 

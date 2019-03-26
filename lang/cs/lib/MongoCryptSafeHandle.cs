@@ -15,20 +15,8 @@
  */
 
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
-using System.Diagnostics;
-
-using System.Security;
-using System.Threading;
 //using System.Runtime.ConstrainedExecution;
-
-
 //using System.Security.Permissions;
 
 namespace MongoDB.Crypt

@@ -27,7 +27,7 @@ namespace MongoDB.Crypt
     /// </summary>
     internal class LibraryLoader
     {
-        SharedLibraryLoader _loader;
+        ISharedLibraryLoader _loader;
 
         public LibraryLoader()
         {
@@ -93,9 +93,9 @@ namespace MongoDB.Crypt
             throw new FileNotFoundException("Could not find: " + library);
         }
 
-        public T getFunction<T>(string name)
+        public T GetFunction<T>(string name)
         {
-            IntPtr ptr = _loader.getFunction(name);
+            IntPtr ptr = _loader.GetFunction(name);
             if(ptr != IntPtr.Zero)
             {
                 throw new FunctionNotFoundException(name);
@@ -110,15 +110,15 @@ namespace MongoDB.Crypt
             public FunctionNotFoundException(string message) : base(message) { }
         }
 
-        private interface SharedLibraryLoader
+        private interface ISharedLibraryLoader
         {
-            IntPtr getFunction(string name);
+            IntPtr GetFunction(string name);
         }
 
         /// <summary>
         /// macOS Dynamic Library loader using dlsym
         /// </summary>
-        private class DarwinLibrary : SharedLibraryLoader
+        private class DarwinLibrary : ISharedLibraryLoader
         {
 
             // See dlfcn.h
@@ -129,7 +129,7 @@ namespace MongoDB.Crypt
             public const int RTLD_GLOBAL = 0x8;
             public const int RTLD_NOW = 0x2;
 
-            IntPtr _handle;
+            readonly IntPtr _handle;
             public DarwinLibrary(string path)
             {
 
@@ -141,22 +141,24 @@ namespace MongoDB.Crypt
 
             }
 
-            public IntPtr getFunction(string name)
+            public IntPtr GetFunction(string name)
             {
                 return dlsym(_handle, name);
             }
 
+#pragma warning disable IDE1006 // Naming Styles
             [DllImport("libdl")]
             public static extern IntPtr dlopen(string filename, int flags);
 
             [DllImport("libdl", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
             public static extern IntPtr dlsym(IntPtr handle, string symbol);
+#pragma warning restore IDE1006 // Naming Styles
         }
 
         /// <summary>
         /// Linux Shared Object loader using dlsym
         /// </summary>
-        class LinuxLibrary : SharedLibraryLoader
+        class LinuxLibrary : ISharedLibraryLoader
         {
 
             // See dlfcn.h
@@ -167,7 +169,7 @@ namespace MongoDB.Crypt
             public const int RTLD_GLOBAL = 0x100;
             public const int RTLD_NOW = 0x2;
 
-            IntPtr _handle;
+            readonly IntPtr _handle;
             public LinuxLibrary(string path)
             {
 
@@ -179,25 +181,27 @@ namespace MongoDB.Crypt
 
             }
 
-            public IntPtr getFunction(string name)
+            public IntPtr GetFunction(string name)
             {
                 return dlsym(_handle, name);
             }
 
+#pragma warning disable IDE1006 // Naming Styles
             [DllImport("libdl")]
             public static extern IntPtr dlopen(string filename, int flags);
 
             [DllImport("libdl", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
             public static extern IntPtr dlsym(IntPtr handle, string symbol);
+#pragma warning restore IDE1006 // Naming Styles
         }
 
 
         /// <summary>
         /// Windows DLL loader using GetProcAddress
         /// </summary>
-        private  class WindowsLibrary : SharedLibraryLoader
+        private  class WindowsLibrary : ISharedLibraryLoader
         {
-            IntPtr _handle;
+            readonly IntPtr _handle;
             public WindowsLibrary(string path)
             {
 
@@ -210,7 +214,7 @@ namespace MongoDB.Crypt
 
             }
 
-            public IntPtr getFunction(string name)
+            public IntPtr GetFunction(string name)
             {
                 return GetProcAddress(_handle, name);
             }
