@@ -1,30 +1,42 @@
-﻿using System;
+﻿/*
+ * Copyright 2018-present MongoDB, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
-using System.Diagnostics;
 
-namespace MongoDB.MongoCrypt
+namespace MongoDB.Crypt
 {
-    /*
-     * Windows:
-     * https://stackoverflow.com/questions/2864673/specify-the-search-path-for-dllimport-in-net
-     *
-     * See for better ways
-     * https://github.com/dotnet/coreclr/issues/930
-     * https://github.com/dotnet/corefx/issues/32015
-     *
-     */
+    /// <summary>
+    /// LibraryLoader abstracts loading C functions from a shared library across OS
+    /// </summary>
     internal class LibraryLoader
     {
         SharedLibraryLoader _loader;
 
         public LibraryLoader()
         {
+ // Windows:
+ // https://stackoverflow.com/questions/2864673/specify-the-search-path-for-dllimport-in-net
+ //
+ // See for better ways
+ // https://github.com/dotnet/coreclr/issues/930
+ // https://github.com/dotnet/corefx/issues/32015
             List<string> candidatePaths = new List<string>();
 
             // In the nuget package, get the shared library from a relative path of this assembly
@@ -93,17 +105,20 @@ namespace MongoDB.MongoCrypt
 
         }
 
-        interface SharedLibraryLoader
-        {
-            IntPtr getFunction(string name);
-        }
-
         public class FunctionNotFoundException : Exception
         {
             public FunctionNotFoundException(string message) : base(message) { }
         }
 
-        class DarwinLibrary : SharedLibraryLoader
+        private interface SharedLibraryLoader
+        {
+            IntPtr getFunction(string name);
+        }
+
+        /// <summary>
+        /// macOS Dynamic Library loader using dlsym
+        /// </summary>
+        private class DarwinLibrary : SharedLibraryLoader
         {
 
             // See dlfcn.h
@@ -138,7 +153,9 @@ namespace MongoDB.MongoCrypt
             public static extern IntPtr dlsym(IntPtr handle, string symbol);
         }
 
-
+        /// <summary>
+        /// Linux Shared Object loader using dlsym
+        /// </summary>
         class LinuxLibrary : SharedLibraryLoader
         {
 
@@ -175,7 +192,10 @@ namespace MongoDB.MongoCrypt
         }
 
 
-        class WindowsLibrary : SharedLibraryLoader
+        /// <summary>
+        /// Windows DLL loader using GetProcAddress
+        /// </summary>
+        private  class WindowsLibrary : SharedLibraryLoader
         {
             IntPtr _handle;
             public WindowsLibrary(string path)
@@ -184,7 +204,7 @@ namespace MongoDB.MongoCrypt
                 _handle = LoadLibrary(path);
                 if (_handle == IntPtr.Zero)
                 {
-                    //Marshal.GetLastWin32Error();
+                    //TODO: Marshal.GetLastWin32Error();
                     throw new FileNotFoundException(path);
                 }
 
