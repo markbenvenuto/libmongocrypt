@@ -67,5 +67,6 @@ namespace MongoDB.Crypt
         #endregion
 
         private StatusSafeHandle _handle;
+        
     }
 }

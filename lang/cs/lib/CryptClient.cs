@@ -83,7 +83,7 @@ namespace MongoDB.Crypt
     //    }
     //}
 
-    public class CryptContext : IDisposable
+    public class CryptContext : IDisposable, IStatus
     {
         public enum StateCode
         {
@@ -100,9 +100,10 @@ namespace MongoDB.Crypt
         internal CryptContext(ContextSafeHandle handle)
         {
             _handle = handle;
+            _status = new Status();
         }
 
-        StateCode State
+        public StateCode State
         {
             get
             {
@@ -110,7 +111,7 @@ namespace MongoDB.Crypt
             }
         }
 
-        bool IsDone
+        public bool IsDone
         {
             get { return this.State == StateCode.MONGOCRYPT_CTX_DONE; }
         }
@@ -131,14 +132,14 @@ namespace MongoDB.Crypt
         }
         #endregion
 
-        Binary GetOperation()
+        public Binary GetOperation()
         {
             Binary binary = new Binary();
-            Library.mongocrypt_ctx_mongo_op(_handle, binary.Handle);
+            Check(Library.mongocrypt_ctx_mongo_op(_handle, binary.Handle));
             return binary;
         }
 
-        void Feed(byte[] buffer)
+        public void Feed(byte[] buffer)
         {
             unsafe
             {
@@ -147,7 +148,7 @@ namespace MongoDB.Crypt
                     IntPtr ptr = (IntPtr)p;
                     using(PinnedBinary pinned = new PinnedBinary(ptr, (UInt32)buffer.Length))
                     {
-                        Library.mongocrypt_ctx_mongo_op(_handle, pinned.Handle);
+                        Check(Library.mongocrypt_ctx_mongo_op(_handle, pinned.Handle));
                     }
                 }
             }
@@ -155,13 +156,27 @@ namespace MongoDB.Crypt
 
 
 
-        void MarkDone()
+        public void MarkDone()
         {
             bool done = Library.mongocrypt_ctx_mongo_done(_handle);
             // TODO - check done
         }
 
+        void Check(bool ret)
+        {
+            if(!ret)
+            {
+                _status.Check(this);
+            }
+        }
+
+        void IStatus.Check(Status status)
+        {
+            Library.mongocrypt_ctx_status(_handle, status.Handle);
+        }
+
         ContextSafeHandle _handle;
+        private Status _status;
     }
 
     public class CryptClient : IDisposable
