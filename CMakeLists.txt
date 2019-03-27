@@ -64,7 +64,7 @@ endif()
 
 if ( MSVC )
    # W4996 - POSIX name for this item is deprecated
-   set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} /W3 /wd4996 /D_CRT_SECURE_NO_WARNINGS /WX")
+   set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} /W3 /wd4996 /D_CRT_SECURE_NO_WARNINGS")
 
    # TODO: add support for clang-cl which is detected as MSVC
 else()

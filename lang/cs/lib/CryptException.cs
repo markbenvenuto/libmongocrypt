@@ -20,7 +20,7 @@ namespace MongoDB.Crypt
 {
     public class CryptException : Exception
     {
-        internal CryptException(Library.ErrorType errorType, Int32 code, string message) : base(message)
+        internal CryptException(Library.ErrorType errorType, UInt32 code, string message) : base(message)
         {
             _code = code;
             _errorType = errorType;
@@ -28,7 +28,7 @@ namespace MongoDB.Crypt
 
         // TODO - expose codes
 
-        private Int32 _code;
-        private Library.ErrorType _errorType;
+        private readonly UInt32 _code;
+        private readonly Library.ErrorType _errorType;
     }
 }

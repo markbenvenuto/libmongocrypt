@@ -16,6 +16,7 @@
 
 using System;
 using System.Runtime.InteropServices;
+//using System.Security.Permissions;
 
 namespace MongoDB.Crypt
 {
@@ -32,7 +33,7 @@ namespace MongoDB.Crypt
         {
             if (!Library.mongocrypt_status_ok(_handle))
             {
-                var errorType = Library.mongocrypt_status_error_type(_handle);
+                var errorType = Library.mongocrypt_status_type(_handle);
                 var statusCode = Library.mongocrypt_status_code(_handle);
 
                 IntPtr msgPtr = Library.mongocrypt_status_message(_handle);

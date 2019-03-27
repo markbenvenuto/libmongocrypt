@@ -96,7 +96,7 @@ namespace MongoDB.Crypt
         public T GetFunction<T>(string name)
         {
             IntPtr ptr = _loader.GetFunction(name);
-            if(ptr != IntPtr.Zero)
+            if(ptr == IntPtr.Zero)
             {
                 throw new FunctionNotFoundException(name);
             }

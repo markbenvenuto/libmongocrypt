@@ -43,7 +43,7 @@ namespace MongoDB.Crypt
         protected override bool ReleaseHandle()
         {
             // Here, we must obey all rules for constrained execution regions.
-            Library.mongocrypt_destroy(this.handle);
+            Library.mongocrypt_ctx_destroy(this.handle);
             return true;
             // If ReleaseHandle failed, it can be reported via the
             // "releaseHandleFailed" managed debugging assistant (MDA).  This
