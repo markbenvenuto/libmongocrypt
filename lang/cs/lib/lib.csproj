@@ -25,6 +25,10 @@
     <MDBDeveloperDirectory>../../../build/Debug</MDBDeveloperDirectory>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
   <ItemGroup>
 
     <Content Include="$(MDBDeveloperDirectory)/libmongocrypt.so" Condition="'$(Configuration)'=='Debug' And Exists('$(MDBDeveloperDirectory)/libmongocrypt.so')">

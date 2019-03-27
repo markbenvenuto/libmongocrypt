@@ -139,17 +139,6 @@ namespace MongoDB.Crypt
             MONGOCRYPT_type_CLIENT
         }
 
-internal  enum ContextState {
-   MONGOCRYPT_CTX_ERROR = 0,
-   MONGOCRYPT_CTX_NOTHING_TO_DO = 1,
-   MONGOCRYPT_CTX_NEED_MONGO_COLLINFO = 2, /* run on main MongoClient */
-   MONGOCRYPT_CTX_NEED_MONGO_MARKINGS = 3, /* run on mongocryptd. */
-   MONGOCRYPT_CTX_NEED_MONGO_KEYS = 4,     /* run on key vault */
-   MONGOCRYPT_CTX_NEED_KMS = 5,
-   MONGOCRYPT_CTX_READY = 6, /* ready for encryption/decryption */
-   MONGOCRYPT_CTX_DONE = 7
-};
-
         internal class Delegates
         {
             public delegate IntPtr mongocrypt_version();
@@ -171,26 +160,26 @@ internal  enum ContextState {
             public delegate BinarySafeHandle mongocrypt_binary_new();
             public delegate void mongocrypt_binary_destroy(IntPtr ptr);
             public delegate void mongocrypt_binary_new_from_data(IntPtr ptr, UInt32 len);
-            public delegate void mongocrypt_binary_data(BinarySafeHandle handle);
-            public delegate void mongocrypt_binary_len(BinarySafeHandle handle);
+            public delegate IntPtr mongocrypt_binary_data(BinarySafeHandle handle);
+            public delegate UInt32 mongocrypt_binary_len(BinarySafeHandle handle);
 
             public delegate ContextSafeHandle mongocrypt_ctx_new(MongoCryptSafeHandle handle);
-            public delegate bool mongocrypt_ctx_status(MongoCryptSafeHandle handle, StatusSafeHandle status);
-            public delegate bool mongocrypt_ctx_encrypt_init(MongoCryptSafeHandle handle, IntPtr ns, UInt32 len);
-            public delegate bool mongocrypt_ctx_decrypt_init(MongoCryptSafeHandle handle, BinarySafeHandle binary);
-            public delegate ContextState mongocrypt_ctx_state(MongoCryptSafeHandle handle);
-            public delegate bool mongocrypt_ctx_mongo_op(MongoCryptSafeHandle handle, BinarySafeHandle bsonOp);
-            public delegate bool mongocrypt_ctx_mongo_feed(MongoCryptSafeHandle handle, BinarySafeHandle reply);
-            public delegate bool mongocrypt_ctx_mongo_done(MongoCryptSafeHandle handle);
+            public delegate bool mongocrypt_ctx_status(ContextSafeHandle handle, StatusSafeHandle status);
+            public delegate bool mongocrypt_ctx_encrypt_init(ContextSafeHandle handle, IntPtr ns, UInt32 len);
+            public delegate bool mongocrypt_ctx_decrypt_init(ContextSafeHandle handle, BinarySafeHandle binary);
+            public delegate CryptContext.StateCode mongocrypt_ctx_state(ContextSafeHandle handle);
+            public delegate bool mongocrypt_ctx_mongo_op(ContextSafeHandle handle, BinarySafeHandle bsonOp);
+            public delegate bool mongocrypt_ctx_mongo_feed(ContextSafeHandle handle, BinarySafeHandle reply);
+            public delegate bool mongocrypt_ctx_mongo_done(ContextSafeHandle handle);
 
-            public delegate IntPtr mongocrypt_ctx_next_kms_ctx(MongoCryptSafeHandle handle);
+            public delegate IntPtr mongocrypt_ctx_next_kms_ctx(ContextSafeHandle handle);
             public delegate bool mongocrypt_kms_ctx_message(IntPtr handle, BinarySafeHandle binary);
             public delegate UInt32 mongocrypt_kms_ctx_bytes_needed(IntPtr handle);
             public delegate bool mongocrypt_kms_ctx_feed(IntPtr handle, BinarySafeHandle binary);
             public delegate bool mongocrypt_kms_ctx_status(IntPtr handle, StatusSafeHandle status);
-            public delegate bool mongocrypt_ctx_kms_done(MongoCryptSafeHandle handle);
+            public delegate bool mongocrypt_ctx_kms_done(ContextSafeHandle handle);
 
-            public delegate bool mongocrypt_ctx_finalize(MongoCryptSafeHandle handle, BinarySafeHandle binary);
+            public delegate bool mongocrypt_ctx_finalize(ContextSafeHandle handle, BinarySafeHandle binary);
             public delegate void mongocrypt_ctx_destroy(IntPtr ptr);
         }
     }

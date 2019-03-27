@@ -20,16 +20,21 @@ using System.Runtime.InteropServices;
 
 namespace MongoDB.Crypt
 {
-
-    public class Status : IDisposable
+    internal class Status : IDisposable
     {
         public Status()
         {
             _handle = Library.mongocrypt_status_new();
         }
 
+        public void Check(IStatus status)
+        {
+            status.Check(this);
+            ThrowExceptionIfNeeded();
+        }
+
         // TODO - flush out
-        public void ThrowExceptionIfNeeded()
+        void ThrowExceptionIfNeeded()
         {
             if (!Library.mongocrypt_status_ok(_handle))
             {
