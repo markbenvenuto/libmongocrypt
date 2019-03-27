@@ -19,25 +19,31 @@ using System.Runtime.InteropServices;
 
 namespace MongoDB.Crypt
 {
-
-    public class ReadOnlyBinary : IDisposable
+    public class Binary : IDisposable
     {
-        internal ReadOnlyBinary()
+        internal Binary()
         {
             _handle = Library.mongocrypt_binary_new();
         }
 
-        IntPtr Data
+        internal Binary(BinarySafeHandle handle)
+        {
+            _handle = handle;
+        }
+
+        public IntPtr Data
         {
             get { return Library.mongocrypt_binary_data(_handle); }
         }
 
-        UInt32 Length
+        public UInt32 Length
         {
             get { return Library.mongocrypt_binary_len(_handle); }
         }
 
-        byte[] ToArray()
+        internal BinarySafeHandle Handle => _handle;
+
+        public byte[] ToArray()
         {
             byte[] arr = new byte[Length];
             Marshal.Copy(Data, arr, 0, arr.Length);
@@ -62,6 +68,20 @@ namespace MongoDB.Crypt
 
         BinarySafeHandle _handle;
     }
+
+    public class PinnedBinary : Binary
+    {
+        internal PinnedBinary(IntPtr ptr, UInt32 len) : base(Library.mongocrypt_binary_new_from_data(ptr, len))
+        {
+        }
+    }
+
+    //public class BinaryArray : Binary
+    //{
+    //    internal BinaryArray(byte[] array) : base(Library.mongocrypt_binary_new_from_data())
+    //    {
+    //    }
+    //}
 
     public class CryptContext : IDisposable
     {
@@ -111,6 +131,36 @@ namespace MongoDB.Crypt
         }
         #endregion
 
+        Binary GetOperation()
+        {
+            Binary binary = new Binary();
+            Library.mongocrypt_ctx_mongo_op(_handle, binary.Handle);
+            return binary;
+        }
+
+        void Feed(byte[] buffer)
+        {
+            unsafe
+            {
+                fixed (byte* p = buffer)
+                {
+                    IntPtr ptr = (IntPtr)p;
+                    using(PinnedBinary pinned = new PinnedBinary(ptr, (UInt32)buffer.Length))
+                    {
+                        Library.mongocrypt_ctx_mongo_op(_handle, pinned.Handle);
+                    }
+                }
+            }
+        }
+
+
+
+        void MarkDone()
+        {
+            bool done = Library.mongocrypt_ctx_mongo_done(_handle);
+            // TODO - check done
+        }
+
         ContextSafeHandle _handle;
     }
 
@@ -138,6 +188,8 @@ namespace MongoDB.Crypt
                     p++;
                 }
             }
+
+            return count;
         }
 
         public CryptContext StartEncryptionContext(string ns)
@@ -146,7 +198,7 @@ namespace MongoDB.Crypt
 
             IntPtr stringPointer = (IntPtr)Marshal.StringToHGlobalAnsi(ns);
 
-            Library.mongocrypt_ctx_encrypt_init(handle, stringPointer, Strlen(stringPointer);
+            Library.mongocrypt_ctx_encrypt_init(handle, stringPointer, Strlen(stringPointer));
 
             Marshal.FreeHGlobal(stringPointer);
 

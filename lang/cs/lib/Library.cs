@@ -19,12 +19,6 @@ using System.Runtime.InteropServices;
 
 namespace MongoDB.Crypt
 {
-
-    public class CryptContext
-    {
-
-    }
-
     public class Library
     {
         static Library()
@@ -159,7 +153,7 @@ namespace MongoDB.Crypt
 
             public delegate BinarySafeHandle mongocrypt_binary_new();
             public delegate void mongocrypt_binary_destroy(IntPtr ptr);
-            public delegate void mongocrypt_binary_new_from_data(IntPtr ptr, UInt32 len);
+            public delegate BinarySafeHandle mongocrypt_binary_new_from_data(IntPtr ptr, UInt32 len);
             public delegate IntPtr mongocrypt_binary_data(BinarySafeHandle handle);
             public delegate UInt32 mongocrypt_binary_len(BinarySafeHandle handle);
 
