@@ -28,6 +28,7 @@ namespace MongoDB.Crypt
             mongocrypt_version = loader.GetFunction<Delegates.mongocrypt_version>("mongocrypt_version");
 
             mongocrypt_new = loader.GetFunction<Delegates.mongocrypt_new>("mongocrypt_new");
+            mongocrypt_init = loader.GetFunction<Delegates.mongocrypt_init>("mongocrypt_init");
             mongocrypt_destroy = loader.GetFunction<Delegates.mongocrypt_destroy>("mongocrypt_destroy");
 
             mongocrypt_opts_new = loader.GetFunction<Delegates.mongocrypt_opts_new>("mongocrypt_opts_new");
@@ -78,6 +79,7 @@ namespace MongoDB.Crypt
         internal static readonly Delegates.mongocrypt_version mongocrypt_version;
 
         internal static readonly Delegates.mongocrypt_new mongocrypt_new;
+        internal static readonly Delegates.mongocrypt_init mongocrypt_init;
         internal static readonly Delegates.mongocrypt_destroy mongocrypt_destroy;
 
         internal static readonly Delegates.mongocrypt_opts_new mongocrypt_opts_new;
@@ -137,7 +139,8 @@ namespace MongoDB.Crypt
         {
             public delegate IntPtr mongocrypt_version();
 
-            public delegate MongoCryptSafeHandle mongocrypt_new(OptionsSafeHandle ptr);
+            public delegate MongoCryptSafeHandle mongocrypt_new();
+            public delegate bool mongocrypt_init(MongoCryptSafeHandle handle, OptionsSafeHandle ptr);
             public delegate void mongocrypt_destroy(IntPtr ptr);
 
             public delegate OptionsSafeHandle mongocrypt_opts_new();

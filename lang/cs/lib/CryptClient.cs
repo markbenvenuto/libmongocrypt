@@ -15,6 +15,7 @@
  */
 
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
 namespace MongoDB.Crypt
@@ -50,6 +51,11 @@ namespace MongoDB.Crypt
             return arr;
         }
 
+        public override string ToString() 
+        {
+            return Marshal.PtrToStringAnsi(Data);
+        }
+
         #region IDisposable
         public void Dispose()
         {
@@ -69,19 +75,65 @@ namespace MongoDB.Crypt
         BinarySafeHandle _handle;
     }
 
-    public class PinnedBinary : Binary
+    internal class PinnedBinary : Binary
     {
         internal PinnedBinary(IntPtr ptr, UInt32 len) : base(Library.mongocrypt_binary_new_from_data(ptr, len))
         {
         }
     }
 
-    //public class BinaryArray : Binary
-    //{
-    //    internal BinaryArray(byte[] array) : base(Library.mongocrypt_binary_new_from_data())
-    //    {
-    //    }
-    //}
+    public class KmsRequest : IStatus
+    {
+        internal KmsRequest(IntPtr id, Status status)
+        {
+            _id = id;
+            _status = status;
+        }
+
+        public Binary GetMessage()
+        {
+            Binary binary = new Binary();
+            // TODO -- check 
+            Library.mongocrypt_kms_ctx_message(_id, binary.Handle);
+            return binary;
+        }
+
+        public void Feed(String str)
+        {
+            IntPtr stringPointer = (IntPtr)Marshal.StringToHGlobalAnsi(str);
+
+            using (PinnedBinary pinned = new PinnedBinary(stringPointer, (UInt32)CryptClient.Strlen(stringPointer)))
+            {
+                // TODO -- check 
+                Library.mongocrypt_kms_ctx_feed(_id, pinned.Handle);
+            }
+
+            // TODO - wrap in try finally
+            Marshal.FreeHGlobal(stringPointer);
+
+
+        }
+
+       public UInt32 BytesNeeded
+        {
+            get { return Library.mongocrypt_kms_ctx_bytes_needed(_id);  }
+        }
+
+        void Check(bool ret)
+        {
+            if (!ret)
+            {
+                _status.Check(this);
+            }
+        }
+        void IStatus.Check(Status status)
+        {
+            Library.mongocrypt_kms_ctx_status(_id, status.Handle);
+        }
+
+        IntPtr _id;
+        Status _status; 
+    }
 
     public class CryptContext : IDisposable, IStatus
     {
@@ -101,6 +153,14 @@ namespace MongoDB.Crypt
         {
             _handle = handle;
             _status = new Status();
+        }
+
+        internal CryptContext(ContextSafeHandle handle, GCHandle gch, PinnedBinary pinned)
+        {
+            _handle = handle;
+            _status = new Status();
+            _gch = gch;
+            _pinned = pinned;
         }
 
         public StateCode State
@@ -128,6 +188,7 @@ namespace MongoDB.Crypt
             if (_handle.IsClosed)
             {
                 _handle.Dispose();
+                _gch.Free();
             }
         }
         #endregion
@@ -148,18 +209,30 @@ namespace MongoDB.Crypt
                     IntPtr ptr = (IntPtr)p;
                     using(PinnedBinary pinned = new PinnedBinary(ptr, (UInt32)buffer.Length))
                     {
-                        Check(Library.mongocrypt_ctx_mongo_op(_handle, pinned.Handle));
+                        Check(Library.mongocrypt_ctx_mongo_feed(_handle, pinned.Handle));
                     }
                 }
             }
         }
 
-
+        // TODO - add this to kms req coll
+        public void MarkKmsDone()
+        {
+            bool done = Library.mongocrypt_ctx_kms_done(_handle);
+            // TODO - check done
+        }
 
         public void MarkDone()
         {
             bool done = Library.mongocrypt_ctx_mongo_done(_handle);
             // TODO - check done
+        }
+
+        public Binary FinalizeForEncryption()
+        {
+            Binary binary = new Binary();
+            Check(Library.mongocrypt_ctx_finalize(_handle, binary.Handle));
+            return binary;
         }
 
         void Check(bool ret)
@@ -170,6 +243,17 @@ namespace MongoDB.Crypt
             }
         }
 
+        public IReadOnlyCollection<KmsRequest> GetKmsMessageRequests()
+        {
+            var requests = new List<KmsRequest>();
+            for (IntPtr request = Library.mongocrypt_ctx_next_kms_ctx(_handle); request != IntPtr.Zero; request = Library.mongocrypt_ctx_next_kms_ctx(_handle))
+            {
+                requests.Add(new KmsRequest (request, _status));
+            }
+
+            return requests;
+        }
+
         void IStatus.Check(Status status)
         {
             Library.mongocrypt_ctx_status(_handle, status.Handle);
@@ -177,6 +261,8 @@ namespace MongoDB.Crypt
 
         ContextSafeHandle _handle;
         private Status _status;
+        private GCHandle _gch;
+        private PinnedBinary _pinned;
     }
 
     public class CryptClient : IDisposable
@@ -191,13 +277,13 @@ namespace MongoDB.Crypt
             Console.WriteLine("Hi");
         }
 
-        private UInt32 Strlen(IntPtr ptr)
+        internal static UInt32 Strlen(IntPtr ptr)
         {
             UInt32 count = 0;
             unsafe
             {
                 byte* p = (byte*)ptr.ToPointer();
-                while(*p == 0)
+                while(*p != 0)
                 {
                     count++;
                     p++;
@@ -215,9 +301,24 @@ namespace MongoDB.Crypt
 
             Library.mongocrypt_ctx_encrypt_init(handle, stringPointer, Strlen(stringPointer));
 
+            // TODO - wrap in try finally
             Marshal.FreeHGlobal(stringPointer);
 
             return new CryptContext(handle);
+        }
+
+
+        public CryptContext StartDecryptionContext(byte[] buffer)
+        {
+            ContextSafeHandle handle = Library.mongocrypt_ctx_new(_handle);
+
+            GCHandle gch = GCHandle.Alloc(buffer, GCHandleType.Pinned);
+
+            PinnedBinary pinned = new PinnedBinary(gch.AddrOfPinnedObject(), (UInt32)buffer.Length);
+               
+            Library.mongocrypt_ctx_decrypt_init(handle, pinned.Handle);
+
+            return new CryptContext(handle, gch, pinned);
 
         }
 

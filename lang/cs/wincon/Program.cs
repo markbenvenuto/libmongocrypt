@@ -25,6 +25,7 @@ using MongoDB.Bson.IO;
 using System.IO;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
+using System.Diagnostics;
 
 namespace wincon
 {
@@ -53,16 +54,26 @@ namespace wincon
 
         static byte[] ToBytes(BsonDocument doc)
         {
-            return doc.ToBson();
+            BsonBinaryWriterSettings settings = new BsonBinaryWriterSettings();
+            // C# driver "magically" changes UUIDs underneath by default so tell it not to
+            settings.GuidRepresentation = GuidRepresentation.Standard;
+            return doc.ToBson(null, settings);
         }
         
-        static BsonDocument ReadTestFile(string file)
+        static BsonDocument ReadJSONTestFile(string file)
         {
             string root = @"d:\repo\libmongocrypt\test\example";
             string full = Path.Combine(root, file);
             string json = File.ReadAllText(full);
 
             return FromJSON(json) ;
+        }
+
+        static string ReadPlainTestFile(string file)
+        {
+            string root = @"d:\repo\libmongocrypt\test\example";
+            string full = Path.Combine(root, file);
+            return File.ReadAllText(full);
         }
 
         static void Main(string[] args)
@@ -77,51 +88,97 @@ namespace wincon
                 options.AwsSecretAccessKey = "us-east-1";
                 options.AwsAccessKeyId = "us-east-1";
 
-                using (var foo = CryptClientFactory.Create(options))
-                using (var context = foo.StartEncryptionContext("test.test"))
-                {
-                    while (!context.IsDone)
-                    {
-                        switch (context.State)
-                        {
-                            case CryptContext.StateCode.MONGOCRYPT_CTX_NEED_MONGO_COLLINFO:
-                                {
-                                    var binary = context.GetOperation();
-                                    var doc = ToDocument(binary);
-                                    Console.WriteLine("ListCollections: " + doc);
-                                    var reply = ReadTestFile("collection-info.json");
-                                    Console.WriteLine("Reply:" + reply);
-                                    context.Feed(ToBytes(reply));
-                                    context.MarkDone();
-                                    break;
-                                }
-                            case CryptContext.StateCode.MONGOCRYPT_CTX_NEED_MONGO_MARKINGS:
-                                {
-                                    var binary = context.GetOperation();
-                                    var doc = ToDocument(binary);
-                                    Console.WriteLine("Markings: " + doc);
-                                    var reply = ReadTestFile("mongocryptd-reply.json");
-                                    Console.WriteLine("Reply:" + reply);
-                                    context.Feed(ToBytes(reply));
-                                    context.MarkDone();
-                                    break;
-                                }
-                            case CryptContext.StateCode.MONGOCRYPT_CTX_NEED_MONGO_KEYS:
-                                {
-                                    var binary = context.GetOperation();
-                                    var doc = ToDocument(binary);
-                                    Console.WriteLine("Key Document: " + doc);
-                                    var reply = ReadTestFile("key-document.json");
-                                    Console.WriteLine("Reply:" + reply);
-                                    context.Feed(ToBytes(reply));
-                                    context.MarkDone();
-                                    break;
-                                }
-                            default:
-                                throw new NotImplementedException();
-                        }
-                    }
+                //using (var foo = CryptClientFactory.Create(options))
+                //using (var context = foo.StartEncryptionContext("test.test"))
+                //{
+                //    ProcessState(context);
 
+                //}
+
+                using (var foo = CryptClientFactory.Create(options))
+                using (var context = foo.StartDecryptionContext(ToBytes(ReadJSONTestFile("encrypted-document.json"))))
+                {
+                    ProcessState(context);
+
+                }
+            }
+        }
+
+        private static void ProcessState(CryptContext context)
+        {
+            while (!context.IsDone)
+            {
+                Console.WriteLine("\n----------------------------------\nState:" + context.State);
+                switch (context.State)
+                {
+                    case CryptContext.StateCode.MONGOCRYPT_CTX_NEED_MONGO_COLLINFO:
+                        {
+                            var binary = context.GetOperation();
+                            var doc = ToDocument(binary);
+                            Console.WriteLine("ListCollections: " + doc);
+                            var reply = ReadJSONTestFile("collection-info.json");
+                            Console.WriteLine("Reply:" + reply);
+                            context.Feed(ToBytes(reply));
+                            context.MarkDone();
+                            break;
+                        }
+                    case CryptContext.StateCode.MONGOCRYPT_CTX_NEED_MONGO_MARKINGS:
+                        {
+                            var binary = context.GetOperation();
+                            var doc = ToDocument(binary);
+                            Console.WriteLine("Markings: " + doc);
+                            var reply = ReadJSONTestFile("mongocryptd-reply.json");
+                            Console.WriteLine("Reply:" + reply);
+                            context.Feed(ToBytes(reply));
+                            context.MarkDone();
+                            break;
+                        }
+                    case CryptContext.StateCode.MONGOCRYPT_CTX_NEED_MONGO_KEYS:
+                        {
+                            var binary = context.GetOperation();
+                            var doc = ToDocument(binary);
+                            Console.WriteLine("Key Document: " + doc);
+                            var reply = ReadJSONTestFile("key-document.json");
+                            Console.WriteLine("Reply:" + reply);
+                            context.Feed(ToBytes(reply));
+                            context.MarkDone();
+                            break;
+                        }
+                    case CryptContext.StateCode.MONGOCRYPT_CTX_NEED_KMS:
+                        {
+                            var requests = context.GetKmsMessageRequests();
+                            foreach(var req in requests)
+                            {
+                                var binary = req.GetMessage();
+                                Console.WriteLine("Key Document: " + binary);
+                                var reply = ReadPlainTestFile("kms-reply.txt");
+                                Console.WriteLine("Reply:" + reply);
+                                req.Feed(reply);
+                                Debug.Assert(req.BytesNeeded == 0);
+                            }
+                            context.MarkKmsDone();
+                            break;
+                        }
+                    case CryptContext.StateCode.MONGOCRYPT_CTX_READY:
+                        {
+                            Binary b = context.FinalizeForEncryption();
+                            Console.WriteLine("Buffer:" + b.ToArray());
+                            break;
+                        }
+                    case CryptContext.StateCode.MONGOCRYPT_CTX_DONE:
+                        {
+                            Console.WriteLine("DONE!!");
+                            return;
+                        }
+                    case CryptContext.StateCode.MONGOCRYPT_CTX_NOTHING_TO_DO:
+                        {
+                            Console.WriteLine("NOTHING TO DO");
+                            return;
+                        }
+                    case CryptContext.StateCode.MONGOCRYPT_CTX_ERROR:
+                        {
+                            throw new NotImplementedException();
+                        }
                 }
             }
         }

@@ -20,7 +20,9 @@ namespace MongoDB.Crypt
     {
         public static CryptClient Create(CryptOptions options)
         {
-            MongoCryptSafeHandle handle = Library.mongocrypt_new(options.Handle);
+            MongoCryptSafeHandle handle = Library.mongocrypt_new();
+
+            Library.mongocrypt_init(handle, options.Handle);
 
             return new CryptClient(handle);
         }
