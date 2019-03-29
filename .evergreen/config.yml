@@ -85,3 +85,8 @@ buildvariants:
   run_on: rhel72-zseries-test
   tasks:
   - build-and-test
+- name: windows-test
+  display_name: "Windows 2016"
+  run_on: windows-64-vs2017-test
+  tasks:
+  - build-and-test
