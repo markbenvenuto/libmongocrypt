@@ -1,5 +1,5 @@
 # Compiles libmongocrypt dependencies and targets.
-# 
+#
 # Set extra cflags for libmongocrypt variables by setting LIBMONGOCRYPT_EXTRA_CFLAGS.
 #
 
@@ -18,6 +18,17 @@ cd $evergreen_root
 
 dotnet_tool=$(which dotnet)
 
-$dotnet_tool build libmongocrypt/cmake-build/lang/cs/cs.sln
+if [ "$OS" == "Windows_NT" ]; then
+    # Make sure libbson.dll is in the path on Windows
+    export PATH=${INSTALL_PREFIX}/mongo-c-driver/bin:$PATH
 
-$dotnet_tool test libmongocrypt/cmake-build/lang/cs/MongoDB.Crypt.Test/MongoDB.Crypt.Test.csproj
+    #for var in TMP TEMP NUGET_PACKAGES NUGET_HTTP_CACHE_PATH APPDATA; do setx $var z:\\data\\tmp; export $var=z:\\data\\tmp; done
+    for var in TMP TEMP NUGET_PACKAGES NUGET_HTTP_CACHE_PATH APPDATA; do export $var=z:\\data\\tmp; done
+
+    # Make dotnet happy over ssh
+    export DOTNET_CLI_HOME="${evergreen_root}/dotnet_home"
+fi
+
+"$dotnet_tool" build libmongocrypt/cmake-build/lang/cs/cs.sln
+
+"$dotnet_tool" test libmongocrypt/cmake-build/lang/cs/MongoDB.Crypt.Test/MongoDB.Crypt.Test.csproj

@@ -215,14 +215,20 @@ namespace MongoDB.Crypt
                 _handle = LoadLibrary(path);
                 if (_handle == IntPtr.Zero)
                 {
-                    //TODO: Marshal.GetLastWin32Error();
-                    throw new FileNotFoundException(path);
+                    var gle = Marshal.GetLastWin32Error();
+                    throw new FileNotFoundException(path + ", Windows Error: " + gle);
                 }
             }
 
             public IntPtr GetFunction(string name)
             {
-                return GetProcAddress(_handle, name);
+                var ptr = GetProcAddress(_handle, name);
+                if (ptr == null) {
+                    var gle = Marshal.GetLastWin32Error();
+                    throw new FunctionNotFoundException(name + ", Windows Error: " + gle);
+                }
+
+                return ptr;
             }
 
             [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Ansi)]
