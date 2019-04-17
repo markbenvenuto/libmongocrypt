@@ -26,9 +26,9 @@ if [ "$OS" == "Windows_NT" ]; then
     for var in TMP TEMP NUGET_PACKAGES NUGET_HTTP_CACHE_PATH APPDATA; do export $var=z:\\data\\tmp; done
 
     # Make dotnet happy over ssh
-    export DOTNET_CLI_HOME="${evergreen_root}/dotnet_home"
+    export DOTNET_CLI_HOME=$(cygpath -w "${evergreen_root}/dotnet_home")
 fi
 
 "$dotnet_tool" build libmongocrypt/cmake-build/lang/cs/cs.sln
 
-"$dotnet_tool" test libmongocrypt/cmake-build/lang/cs/MongoDB.Crypt.Test/MongoDB.Crypt.Test.csproj
+"$dotnet_tool" test libmongocrypt/cmake-build/lang/cs/MongoDB.Crypt.Test/MongoDB.Crypt.Test.csproj -- RunConfiguration.TargetPlatform=x64
