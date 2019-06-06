@@ -85,10 +85,11 @@ if ( MSVC )
    # W4996 - POSIX name for this item is deprecated
    set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} /W3 /wd4996 /D_CRT_SECURE_NO_WARNINGS /WX")
 
+   
    # TODO: add support for clang-cl which is detected as MSVC
 else()
    # GNU, Clang, AppleClang
-   set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -Wall -Werror -Wno-missing-braces -Wno-unused-function")
+   set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -Wall -Werror -Wno-missing-braces -Wno-unused-function -fPIC -Wl,--as-needed ")
 endif()
 
 # Choose a Crypto provider
@@ -98,6 +99,8 @@ if (APPLE)
 elseif (WIN32)
    set (MONGOCRYPT_CRYPTO CNG)
 endif ()
+
+set (CMAKE_SHARED_LINKER_FLAGS "-Wl,--as-needed")
 
 
 if (MONGOCRYPT_CRYPTO STREQUAL CommonCrypto)
@@ -111,10 +114,16 @@ elseif (MONGOCRYPT_CRYPTO STREQUAL CNG)
       src/crypto/cng.c
    )
 else ()
+   set (OPENSSL_USE_STATIC_LIBS on)
    message ("Building with OpenSSL")
    include (FindOpenSSL)
    message ("Found OpenSSL version ${OPENSSL_VERSION}")
+
+   # SET(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
+   # include (FindZLIB)
+
    list(APPEND MONGOCRYPT_SOURCES
+
       src/crypto/openssl.c
    )
 endif ()
@@ -130,6 +139,8 @@ target_link_libraries (mongocrypt PRIVATE ${BSON_LIBRARIES})
 target_link_libraries (mongocrypt PRIVATE ${CMAKE_THREAD_LIBS_INIT})
 target_link_libraries (mongocrypt PRIVATE kms_message_static)
 target_compile_definitions (mongocrypt PRIVATE "${BSON_DEFINITIONS}")
+#set_target_properties(mongocrypt PROPERTIES LINK_DEPENDS "foo.script")
+target_link_options(mongocrypt PRIVATE "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/foo.script")
 
 generate_export_header(mongocrypt EXPORT_FILE_NAME src/mongocrypt-export.h BASE_NAME mongocrypt )
 
@@ -149,8 +160,10 @@ elseif (MONGOCRYPT_CRYPTO STREQUAL CNG)
    target_link_libraries (mongocrypt PRIVATE "bcrypt")
    target_link_libraries (mongocrypt_static PRIVATE "bcrypt")
 else ()
-   target_link_libraries (mongocrypt PRIVATE OpenSSL::SSL OpenSSL::Crypto)
-   target_link_libraries (mongocrypt_static PRIVATE OpenSSL::SSL OpenSSL::Crypto)
+   # target_link_libraries (mongocrypt PRIVATE OpenSSL::Crypto ZLIB::ZLIB dl)
+   # target_link_libraries (mongocrypt_static PRIVATE OpenSSL::Crypto ZLIB::ZLIB dl)
+   target_link_libraries (mongocrypt PRIVATE OpenSSL::Crypto dl)
+   target_link_libraries (mongocrypt_static PRIVATE OpenSSL::Crypto dl)
 endif ()
 
 

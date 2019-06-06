@@ -48,6 +48,23 @@ elseif (APPLE)
    )
 else()
    set (KMS_MESSAGE_SOURCES ${KMS_MESSAGE_SOURCES}
+
+../zlib/adler32.c
+../zlib/compress.c
+../zlib/crc32.c
+../zlib/deflate.c
+# ../zlib/gzclose.c
+# ../zlib/gzlib.c
+# ../zlib/gzread.c
+# ../zlib/gzwrite.c
+../zlib/infback.c
+../zlib/inffast.c
+../zlib/inflate.c
+../zlib/inftrees.c
+../zlib/trees.c
+../zlib/uncompr.c
+../zlib/zutil.c
+
       src/kms_crypto_openssl.c
    )
 endif()
@@ -73,10 +90,18 @@ if (WIN32)
 elseif (APPLE)
    # Nothing
 else()
+   set (OPENSSL_USE_STATIC_LIBS on)
    include (FindOpenSSL)
-   target_link_libraries(kms_message "${OPENSSL_LIBRARIES}")
+
+   # SET(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
+   # include (FindZLIB)
+   set (CMAKE_SHARED_LINKER_FLAGS "-Wl,--as-needed")
+
+   # target_link_libraries(kms_message OpenSSL::Crypto ZLIB::ZLIB dl)
+   target_link_libraries(kms_message OpenSSL::Crypto dl)
    target_include_directories(kms_message PRIVATE "${OPENSSL_INCLUDE_DIR}")
-   target_link_libraries(kms_message_static "${OPENSSL_LIBRARIES}")
+   # target_link_libraries(kms_message_static OpenSSL::Crypto ZLIB::ZLIB dl)
+   target_link_libraries(kms_message_static OpenSSL::Crypto dl)
    target_include_directories(kms_message_static PRIVATE "${OPENSSL_INCLUDE_DIR}")
 endif()
 
