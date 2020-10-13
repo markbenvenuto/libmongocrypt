@@ -17,11 +17,13 @@
 namespace MongoDB.Libmongocrypt
 {
     /// <summary>
-    /// Type of Kms
+    /// Type of Kms.
     /// </summary>
     public enum KmsType
     {
         Aws = 0,
         Local = 1,
+        Azure = 2,
+        Gcp = 3 // google cloud platform
     }
 }

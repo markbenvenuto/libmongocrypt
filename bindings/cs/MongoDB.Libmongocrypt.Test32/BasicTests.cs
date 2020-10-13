@@ -18,33 +18,43 @@ using System;
 using System.Collections.Generic;
 using Xunit;
 using FluentAssertions;
-using MongoDB.Libmongocrypt;
+using MongoDB.Bson;
 
 namespace MongoDB.Libmongocrypt.Test32
 {
     public class BasicTests
     {
-        CryptOptions CreateOptions()
-        {
-            return new CryptOptions(
+        BsonDocument CreateAwsCredentialsDocument() => 
+            new BsonDocument
+                {
+                    {
+                        "aws",
+                        new BsonDocument
+                        {
+                            { "secretAccessKey", "us-east-1" },
+                            { "accessKeyId", "us-east-1" }
+                        }
+                    }
+                };
+
+        CryptOptions CreateOptions() => 
+            new CryptOptions(
                 new Dictionary<KmsType, IKmsCredentials>()
                 {
                     {
                         KmsType.Aws,
-                        new AwsKmsCredentials(
-                            awsSecretAccessKey: "us-east-1",
-                            awsAccessKeyId: "us-east-1")
+                        new KmsCredentials(
+                            KmsType.Aws,
+                            CreateAwsCredentialsDocument().ToBson())
                     }
                 }
             );
-        }
 
         [Fact]
         public void CryptClientShouldFailToiInitializeWhenTargetingX86()
         {
             var exception = Record.Exception(() => CryptClientFactory.Create(CreateOptions()));
             exception.Should().BeOfType<PlatformNotSupportedException>();
-
         }
     }
 }

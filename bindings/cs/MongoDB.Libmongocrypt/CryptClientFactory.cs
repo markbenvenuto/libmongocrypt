@@ -32,6 +32,13 @@ namespace MongoDB.Libmongocrypt
 
             Status status = new Status();
 
+            //var cryptoCallback = new Library.Delegates.CryptoCallback(
+            //    SigningRSAESPKCSCallback.hmac);
+            //handle.Check(
+            //    status,
+            //    Library.mongocrypt_setopt_crypto_hook_sign_rsaes_pkcs1_v1_5
+            //    (handle, cryptoCallback, IntPtr.Zero));
+
             foreach (var kmsCredentials in options.KmsCredentialsMap)
             {
                 ((IInternalKmsCredentials)kmsCredentials.Value).SetCredentials(handle,status);
