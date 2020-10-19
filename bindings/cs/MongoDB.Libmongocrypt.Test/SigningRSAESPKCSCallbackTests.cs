@@ -52,7 +52,7 @@ namespace MongoDB.Libmongocrypt.Test
         {
             byte[] privateKeyBytes = Convert.FromBase64String(PrivateKey);
             var dataBytes = Encoding.ASCII.GetBytes(DataToSign);
-            byte[] signature = SigningRSAESPKCSCallback.HashAndSignBytes(privateKeyBytes, dataBytes);
+            byte[] signature = SigningRSAESPKCSCallback.HashAndSignBytes(dataBytes, privateKeyBytes);
             string output = Convert.ToBase64String(signature);
 
             output.Should().Be(ExpectedSignature);

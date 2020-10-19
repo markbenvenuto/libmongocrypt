@@ -16,7 +16,9 @@
 
 using System;
 using System.Runtime.InteropServices;
+#if NETSTANDARD2_1
 using System.Security.Cryptography;
+#endif
 
 namespace MongoDB.Libmongocrypt
 {
@@ -31,30 +33,25 @@ namespace MongoDB.Libmongocrypt
             BinarySafeHandle @out,
             StatusSafeHandle status)
         {
-#if NET452
-            byte[] originalData = GetBytes(@in);
-            byte[] keyBytes = GetBytes(key);
-            byte[] signedData;
+            throw new Exception("test");
+            //byte[] originalData = GetBytes(@in);
+            //byte[] keyBytes = GetBytes(key);
+            //byte[] signedData;
 
-            // Hash and sign the data.
-            signedData = HashAndSignBytes(originalData, keyBytes);
-#endif
-            return true;
+            //// Hash and sign the data.
+            //signedData = HashAndSignBytes(originalData, keyBytes);
+            //return true;
         }
 
-        public static byte[] HashAndSignBytes(byte[] dataToSign, byte[] key /*RSAParameters Key*/)
+        public static byte[] HashAndSignBytes(byte[] dataToSign, byte[] key)
         {
 #if NETSTANDARD2_1
             try
             {
-                // Create a new instance of RSACryptoServiceProvider using the
-                // key from RSAParameters.
-                var rsaProvider = new RSACryptoServiceProvider(); // RSAalg
+                var rsaProvider = new RSACryptoServiceProvider();
 
-                rsaProvider.ImportPkcs8PrivateKey (key, out _);
+                rsaProvider.ImportPkcs8PrivateKey(key, out _);
 
-                // Hash and sign the data. Pass a new instance of SHA256
-                // to specify the hashing algorithm.
                 return rsaProvider.SignData(dataToSign, SHA256.Create());
             }
             catch (CryptographicException)
@@ -62,15 +59,13 @@ namespace MongoDB.Libmongocrypt
                 throw;
             }
 #else
-            // TODO
-            throw new System.NotSupportedException("RSACryptoServiceProvider is supported only on net452.");
+            throw new System.PlatformNotSupportedException("RSACryptoServiceProvider.ImportPkcs8PrivateKey is supported only on frameworks higher or equal to .netstandard2.1.");
 #endif
         }
 
         // private methods
         private static byte[] GetBytes(BinarySafeHandle handle)
         {
-            // TODO
             using (var inBinary = new Binary(handle))
             {
                 var managedBytes = new byte[inBinary.Length];

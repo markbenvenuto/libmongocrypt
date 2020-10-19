@@ -333,7 +333,7 @@ namespace MongoDB.Libmongocrypt
 
             [return: MarshalAs(UnmanagedType.I1)]
             public delegate bool CryptoCallback(
-                IntPtr context,
+                IntPtr ctx,
                 BinarySafeHandle key,
                 BinarySafeHandle @in,
                 BinarySafeHandle @out,
