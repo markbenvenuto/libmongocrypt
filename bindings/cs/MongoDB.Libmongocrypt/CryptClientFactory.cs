@@ -35,7 +35,7 @@ namespace MongoDB.Libmongocrypt
 
             // The below code can be avoided on Windows. So, we don't call it on this system 
             // to avoid the restriction on target frameworks that should be higher than .netstandard2.1
-            if (OperationSystemHelper.CurrentOperationSystem != OperationSystemPlatform.Windows)
+            //if (OperationSystemHelper.CurrentOperationSystem != OperationSystemPlatform.Windows)
             {
                 var cryptoCallback = new Library.Delegates.CryptoCallback(
                     SigningRSAESPKCSCallback.hmac);

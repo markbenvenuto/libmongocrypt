@@ -188,9 +188,9 @@ namespace drivertest
             Binary bin = request.Message;
             stream.Write(bin.ToArray());
 
-            byte[] buffer = new byte[4096];
             while (request.BytesNeeded > 0)
             {
+                byte[] buffer = new byte[request.BytesNeeded];
                 MemoryStream memBuffer = new MemoryStream();
                 int read = stream.Read(buffer, 0, buffer.Length);
                 if (read > 0)
@@ -377,7 +377,8 @@ namespace drivertest
 
             Console.WriteLine("Using url: " + args);
             // or change me to use the mock
-            Uri kmsURL = Environment.GetEnvironmentVariable("FLE_AWS_SECRET_ACCESS_KEY") != null ? null : new Uri("https://localhost:8000");
+            Uri kmsURL = new Uri("https://cloudkms.googleapis.com");
+                //Environment.GetEnvironmentVariable("FLE_AWS_SECRET_ACCESS_KEY") != null ? null : new Uri("https://localhost:8000");
 
             var cryptDUrl = new MongoUrl("mongodb://localhost:27020");
             var client = new MongoClient("mongodb://localhost:27017");
@@ -386,31 +387,33 @@ namespace drivertest
 
             var controller = new MongoCryptDController(cryptDUrl, collKeyVault, kmsURL);
 
-            var awsKeyId = new KmsKeyId(
-                KmsType.Aws,
+            var gcpKeyId = new KmsKeyId(
+                KmsType.Gcp,
                 new BsonDocument
                 {
-                    { "provider", "aws" },
-                    { "region", "us-east-1" },
-                    { "key", "arn:aws:kms:us-east-1:579766882180:key/0689eb07-d588-4bbf-a83e-42157a92576b" }
+                    { "provider", "gcp" },
+                    { "projectId", "csfle-poc" },
+                    { "location", "global" },
+                    { "keyRing", "test" },
+                    { "keyName", "quickstart" },
                 }.ToBson())
             ;
 
             KmsCredentials kmsCredentials = new KmsCredentials(
-                KmsType.Aws,
+                KmsType.Gcp,
                 new BsonDocument
                 {
-                    {  "aws",
+                    {  "gcp",
                         new BsonDocument
                         {
-                            { "secretAccessKey",  GetEnvironmenVariabletOrValue("FLE_AWS_SECRET_ACCESS_KEY", "us-east-1") },
-                            { "accessKeyId", GetEnvironmenVariabletOrValue("FLE_AWS_ACCESS_KEY_ID", "us-east-1") }
-                        } 
+                            { "email",  Environment.GetEnvironmentVariable("FLE_GCP_EMAIL") },
+                            { "privateKey", Environment.GetEnvironmentVariable("FLE_GCP_PRIVATE_KEY") }
+                        }
                     }
                 }.ToBson());
 
 
-            Guid keyID = controller.GenerateKey(kmsCredentials, awsKeyId);
+            Guid keyID = controller.GenerateKey(kmsCredentials, gcpKeyId);
 
             IMongoCollection<BsonDocument> collection = SetupTestCollection(client, keyID);
             var database = collection.Database;
