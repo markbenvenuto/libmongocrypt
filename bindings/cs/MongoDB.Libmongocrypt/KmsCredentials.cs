@@ -6,9 +6,7 @@ namespace MongoDB.Libmongocrypt
     /// <summary>
     /// KMS Credentials
     /// </summary>
-    /// <seealso cref="IKmsCredentials" />
-    /// <seealso cref="IInternalKmsCredentials" />
-    public class KmsCredentials : IKmsCredentials, IInternalKmsCredentials
+    public class KmsCredentials
     {
         #region static
         private static readonly KmsType[] __supportedKmsTypes = new[]
@@ -37,16 +35,8 @@ namespace MongoDB.Libmongocrypt
 
         public KmsType KmsType => _kmsType;
 
-        // private methods
-        private void EnsureThatKmsTypeIsSupported(KmsType kmsType)
-        {
-            if (!__supportedKmsTypes.Contains(kmsType))
-            {
-                throw new NotSupportedException($"The provided kms type {kmsType} is not supported.");
-            }
-        }
-
-        void IInternalKmsCredentials.SetCredentials(MongoCryptSafeHandle handle, Status status)
+        // internal methods
+        internal void SetCredentials(MongoCryptSafeHandle handle, Status status)
         {
             unsafe
             {
@@ -58,6 +48,15 @@ namespace MongoDB.Libmongocrypt
                         handle.Check(status, Library.mongocrypt_setopt_kms_providers(handle, pinned.Handle));
                     }
                 }
+            }
+        }
+
+        // private methods
+        private void EnsureThatKmsTypeIsSupported(KmsType kmsType)
+        {
+            if (!__supportedKmsTypes.Contains(kmsType))
+            {
+                throw new NotSupportedException($"The provided kms type {kmsType} is not supported.");
             }
         }
     }

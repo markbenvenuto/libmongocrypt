@@ -99,10 +99,10 @@ namespace drivertest
             _kmsEndpoint = kmsEndpoint;
         }
 
-        public Guid GenerateKey(IKmsCredentials credentials, IKmsKeyId kmsKeyId)
+        public Guid GenerateKey(KmsCredentials credentials, KmsKeyId kmsKeyId)
         {
             var options = new CryptOptions(
-                new Dictionary<KmsType, IKmsCredentials>()
+                new Dictionary<KmsType, KmsCredentials>()
                 {
                     { credentials.KmsType, credentials }
                 });
@@ -120,10 +120,10 @@ namespace drivertest
             return g;
         }
 
-        public BsonDocument EncryptCommand(IKmsCredentials credentials, IMongoCollection<BsonDocument> coll, BsonDocument cmd)
+        public BsonDocument EncryptCommand(KmsCredentials credentials, IMongoCollection<BsonDocument> coll, BsonDocument cmd)
         {
             var options = new CryptOptions(
-                new Dictionary<KmsType, IKmsCredentials>()
+                new Dictionary<KmsType, KmsCredentials>()
                 {
                     { credentials.KmsType, credentials }
                 });
@@ -135,10 +135,10 @@ namespace drivertest
             }
         }
 
-        public BsonDocument DecryptCommand(IKmsCredentials credentials, IMongoDatabase db, BsonDocument doc)
+        public BsonDocument DecryptCommand(KmsCredentials credentials, IMongoDatabase db, BsonDocument doc)
         {
             CryptOptions options = new CryptOptions(
-                new Dictionary<KmsType, IKmsCredentials>()
+                new Dictionary<KmsType, KmsCredentials>()
                 {
                     { credentials.KmsType, credentials }
                 });
@@ -386,7 +386,7 @@ namespace drivertest
 
             var controller = new MongoCryptDController(cryptDUrl, collKeyVault, kmsURL);
 
-            var awsKeyId = new KeyId(
+            var awsKeyId = new KmsKeyId(
                 KmsType.Aws,
                 new BsonDocument
                 {

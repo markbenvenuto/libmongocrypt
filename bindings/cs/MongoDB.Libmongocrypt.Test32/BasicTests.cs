@@ -39,7 +39,7 @@ namespace MongoDB.Libmongocrypt.Test32
 
         CryptOptions CreateOptions() => 
             new CryptOptions(
-                new Dictionary<KmsType, IKmsCredentials>()
+                new Dictionary<KmsType, KmsCredentials>()
                 {
                     {
                         KmsType.Aws,

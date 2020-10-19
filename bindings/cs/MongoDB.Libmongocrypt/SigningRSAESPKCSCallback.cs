@@ -44,14 +44,14 @@ namespace MongoDB.Libmongocrypt
 
         public static byte[] HashAndSignBytes(byte[] dataToSign, byte[] key /*RSAParameters Key*/)
         {
-#if NET452
+#if NETSTANDARD2_1
             try
             {
                 // Create a new instance of RSACryptoServiceProvider using the
                 // key from RSAParameters.
                 var rsaProvider = new RSACryptoServiceProvider(); // RSAalg
 
-                //rsaProvider.ImportParameters(key);
+                rsaProvider.ImportPkcs8PrivateKey (key, out _);
 
                 // Hash and sign the data. Pass a new instance of SHA256
                 // to specify the hashing algorithm.
@@ -62,6 +62,7 @@ namespace MongoDB.Libmongocrypt
                 throw;
             }
 #else
+            // TODO
             throw new System.NotSupportedException("RSACryptoServiceProvider is supported only on net452.");
 #endif
         }
@@ -69,6 +70,7 @@ namespace MongoDB.Libmongocrypt
         // private methods
         private static byte[] GetBytes(BinarySafeHandle handle)
         {
+            // TODO
             using (var inBinary = new Binary(handle))
             {
                 var managedBytes = new byte[inBinary.Length];

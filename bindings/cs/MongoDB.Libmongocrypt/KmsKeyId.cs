@@ -23,7 +23,7 @@ namespace MongoDB.Libmongocrypt
     /// <summary>
     /// Represent a kms key.
     /// </summary>
-    public class KmsKeyId : IKmsKeyId, IInternalKmsKeyId
+    public class KmsKeyId
     {
         private readonly IReadOnlyList<byte[]> _alternateKeyNameBytes;
         private readonly byte[] _dataKeyOptionsBytes;
@@ -51,8 +51,26 @@ namespace MongoDB.Libmongocrypt
         /// <inheritdoc />
         public KmsType KeyType => _kmsType;
 
-        /// <inheritdoc />
-        void IInternalKmsKeyId.SetCredentials(ContextSafeHandle context, Status status)
+        // internal methods
+        internal void SetAlternateKeyNames(ContextSafeHandle context, Status status)
+        {
+            foreach (var alternateKeyNameBytes in _alternateKeyNameBytes)
+            {
+                unsafe
+                {
+                    fixed (byte* p = alternateKeyNameBytes)
+                    {
+                        IntPtr ptr = (IntPtr)p;
+                        using (PinnedBinary pinned = new PinnedBinary(ptr, (uint)alternateKeyNameBytes.Length))
+                        {
+                            context.Check(status, Library.mongocrypt_ctx_setopt_key_alt_name(context, pinned.Handle));
+                        }
+                    }
+                }
+            }
+        }
+
+        internal void SetCredentials(ContextSafeHandle context, Status status)
         {
             unsafe
             {
@@ -65,13 +83,7 @@ namespace MongoDB.Libmongocrypt
                     }
                 }
             }
-            ((IInternalKmsKeyId)this).SetAlternateKeyNames(context, status);
-        }
-
-        /// <inheritdoc />
-        void IInternalKmsKeyId.SetAlternateKeyNames(ContextSafeHandle context, Status status)
-        {
-            this.SetAlternateKeyNames(context, status);
+            SetAlternateKeyNames(context, status);
         }
     }
 }

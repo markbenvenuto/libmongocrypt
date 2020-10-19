@@ -50,8 +50,8 @@ namespace MongoDB.Libmongocrypt.Test
                     }
                 }
             };
-        KeyId CreateLocalKey(IEnumerable<byte[]> keyAltNameBuffers = null) =>
-            new KeyId(
+        KmsKeyId CreateLocalKey(IEnumerable<byte[]> keyAltNameBuffers = null) =>
+            new KmsKeyId(
                 KmsType.Local,
                 new BsonDocument
                 {
@@ -77,8 +77,8 @@ namespace MongoDB.Libmongocrypt.Test
                     }
                 }
             };
-        KeyId CreateAwsKey(string endpoint = null, IEnumerable<byte[]> keyAltNameBuffers = null) =>
-            new KeyId(
+        KmsKeyId CreateAwsKey(string endpoint = null, IEnumerable<byte[]> keyAltNameBuffers = null) =>
+            new KmsKeyId(
                 KmsType.Aws,
                 new BsonDocument
                 {
@@ -96,6 +96,7 @@ namespace MongoDB.Libmongocrypt.Test
         #endregion
 
         #region azure data
+        // TODO: add tests
         /*
         BsonDocument CreateAzureCredentialsDocument() =>
             new BsonDocument
@@ -131,8 +132,6 @@ namespace MongoDB.Libmongocrypt.Test
                     CreateAwsKmsCredentials(),
                     CreateLocalKmsCredentials()));
         }
-
-
 
         [Fact]
         public void EncryptQuery()
@@ -528,9 +527,9 @@ namespace MongoDB.Libmongocrypt.Test
         }
 
         // private methods
-        private Dictionary<KmsType, IKmsCredentials> CreateCredentialsMap(params IKmsCredentials[] map)
+        private Dictionary<KmsType, KmsCredentials> CreateCredentialsMap(params KmsCredentials[] map)
         {
-            var dictionary = new Dictionary<KmsType, IKmsCredentials>();
+            var dictionary = new Dictionary<KmsType, KmsCredentials>();
             foreach (var item in map)
             {
                 dictionary.Add(item.KmsType, item);

@@ -24,18 +24,18 @@ namespace MongoDB.Libmongocrypt
     /// </summary>
     public class CryptOptions
     {
-        public IReadOnlyDictionary<KmsType, IKmsCredentials> KmsCredentialsMap { get; }
+        public IReadOnlyDictionary<KmsType, KmsCredentials> KmsCredentialsMap { get; }
         public byte[] Schema { get; }
 
-        public CryptOptions(IDictionary<KmsType, IKmsCredentials> map) : this(map, null)
+        public CryptOptions(IDictionary<KmsType, KmsCredentials> map) : this(map, null)
         {
         }
 
         public CryptOptions(
-            IDictionary<KmsType, IKmsCredentials> map,
+            IDictionary<KmsType, KmsCredentials> map,
             byte[] schema)
         {
-            KmsCredentialsMap = new ReadOnlyDictionary<KmsType, IKmsCredentials>(map);
+            KmsCredentialsMap = new ReadOnlyDictionary<KmsType, KmsCredentials>(map);
             Schema = schema;
         }
 

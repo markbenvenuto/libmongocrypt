@@ -32,6 +32,7 @@ namespace MongoDB.Libmongocrypt
 
             Status status = new Status();
 
+            // TODO: restore
             //var cryptoCallback = new Library.Delegates.CryptoCallback(
             //    SigningRSAESPKCSCallback.hmac);
             //handle.Check(
@@ -41,7 +42,7 @@ namespace MongoDB.Libmongocrypt
 
             foreach (var kmsCredentials in options.KmsCredentialsMap)
             {
-                ((IInternalKmsCredentials)kmsCredentials.Value).SetCredentials(handle,status);
+                kmsCredentials.Value.SetCredentials(handle,status);
             }
 
             if (options.Schema != null)
