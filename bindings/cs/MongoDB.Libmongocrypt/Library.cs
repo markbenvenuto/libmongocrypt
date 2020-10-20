@@ -70,6 +70,8 @@ namespace MongoDB.Libmongocrypt
                 true);
             _mongocrypt_status_ok = new Lazy<Delegates.mongocrypt_status_ok>(
                 () => __loader.Value.GetFunction<Delegates.mongocrypt_status_ok>(("mongocrypt_status_ok")), true);
+            _mongocrypt_status_set = new Lazy<Delegates.mongocrypt_status_set>(
+                () => __loader.Value.GetFunction<Delegates.mongocrypt_status_set>(("mongocrypt_status_set")), true);
 
             _mongocrypt_binary_new = new Lazy<Delegates.mongocrypt_binary_new>(
                 () => __loader.Value.GetFunction<Delegates.mongocrypt_binary_new>(("mongocrypt_binary_new")), true);
@@ -197,6 +199,7 @@ namespace MongoDB.Libmongocrypt
         internal static Delegates.mongocrypt_status_code mongocrypt_status_code => _mongocrypt_status_code.Value;
         internal static Delegates.mongocrypt_status_message mongocrypt_status_message => _mongocrypt_status_message.Value;
         internal static Delegates.mongocrypt_status_ok mongocrypt_status_ok => _mongocrypt_status_ok.Value;
+        internal static Delegates.mongocrypt_status_set mongocrypt_status_set => _mongocrypt_status_set.Value;
 
         internal static Delegates.mongocrypt_binary_new mongocrypt_binary_new => _mongocrypt_binary_new.Value;
         internal static Delegates.mongocrypt_binary_destroy mongocrypt_binary_destroy => _mongocrypt_binary_destroy.Value;
@@ -257,6 +260,7 @@ namespace MongoDB.Libmongocrypt
         private static readonly Lazy<Delegates.mongocrypt_status_code> _mongocrypt_status_code;
         private static readonly Lazy<Delegates.mongocrypt_status_message> _mongocrypt_status_message;
         private static readonly Lazy<Delegates.mongocrypt_status_ok> _mongocrypt_status_ok;
+        private static readonly Lazy<Delegates.mongocrypt_status_set> _mongocrypt_status_set;
 
         private static readonly Lazy<Delegates.mongocrypt_binary_new> _mongocrypt_binary_new;
         private static readonly Lazy<Delegates.mongocrypt_binary_destroy> _mongocrypt_binary_destroy;
@@ -300,12 +304,11 @@ namespace MongoDB.Libmongocrypt
         private static readonly Lazy<Delegates.mongocrypt_ctx_finalize> _mongocrypt_ctx_finalize;
         private static readonly Lazy<Delegates.mongocrypt_ctx_destroy> _mongocrypt_ctx_destroy;
 
-        internal enum ErrorType
+        internal enum StatusType
         {
-            MONGOCRYPT_type_NONE = 0,
-            MONGOCRYPT_type_MONGOCRYPTD,
-            MONGOCRYPT_type_KMS,
-            MONGOCRYPT_type_CLIENT
+            MONGOCRYPT_STATUS_OK = 0,
+            MONGOCRYPT_STATUS_ERROR_CLIENT,
+            MONGOCRYPT_STATUS_ERROR_KMS
         }
 
         internal class Delegates
@@ -332,17 +335,18 @@ namespace MongoDB.Libmongocrypt
                 ContextSafeHandle handle, BinarySafeHandle bin);
 
             [return: MarshalAs(UnmanagedType.I1)]
+            [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
             public delegate bool CryptoCallback(
                 IntPtr ctx,
-                BinarySafeHandle key,
-                BinarySafeHandle @in,
-                BinarySafeHandle @out,
-                StatusSafeHandle status);
+                IntPtr key,
+                IntPtr @in,
+                IntPtr @out,
+                IntPtr status);
 
             [return: MarshalAs(UnmanagedType.I1)]
             public delegate bool mongocrypt_setopt_crypto_hook_sign_rsaes_pkcs1_v1_5(
                 MongoCryptSafeHandle handle,
-                [MarshalAs(UnmanagedType.FunctionPtr)] CryptoCallback sign_rsaes_pkcs1_v1_5,
+                CryptoCallback sign_rsaes_pkcs1_v1_5,
                 IntPtr sign_ctx);
 
             [return: MarshalAs(UnmanagedType.I1),]
@@ -359,7 +363,7 @@ namespace MongoDB.Libmongocrypt
 
             public delegate void mongocrypt_status_destroy(IntPtr ptr);
 
-            public delegate ErrorType mongocrypt_status_type(StatusSafeHandle ptr);
+            public delegate StatusType mongocrypt_status_type(StatusSafeHandle ptr);
 
             public delegate uint mongocrypt_status_code(StatusSafeHandle ptr);
 
@@ -367,6 +371,8 @@ namespace MongoDB.Libmongocrypt
 
             [return: MarshalAs(UnmanagedType.I1)]
             public delegate bool mongocrypt_status_ok(StatusSafeHandle ptr);
+
+            public delegate void mongocrypt_status_set(StatusSafeHandle ptr, int type, uint code, IntPtr msg, int length);
 
             public delegate BinarySafeHandle mongocrypt_binary_new();
 

@@ -32,10 +32,28 @@ namespace MongoDB.Libmongocrypt
             _handle = Library.mongocrypt_status_new();
         }
 
+        public Status(StatusSafeHandle handle)
+        {
+            _handle = handle;
+        }
+
         public void Check(IStatus status)
         {
             status.Check(this);
             ThrowExceptionIfNeeded();
+        }
+
+        public void SetStatus(uint code, string msg)
+        {
+            IntPtr stringPointer = (IntPtr)Marshal.StringToHGlobalAnsi(msg);
+            try
+            {
+                Library.mongocrypt_status_set(_handle, (int)Library.StatusType.MONGOCRYPT_STATUS_ERROR_CLIENT, code, stringPointer, -1);
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(stringPointer);
+            }
         }
 
         #region IDisposable

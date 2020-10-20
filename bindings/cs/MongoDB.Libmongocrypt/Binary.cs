@@ -74,6 +74,15 @@ namespace MongoDB.Libmongocrypt
         }
 
         /// <summary>
+        /// Converts to array.
+        /// </summary>
+        /// <returns></returns>
+        public void WriteBytes(byte[] bytes)
+        {
+            Marshal.Copy(bytes, 0, Data, (int)Length);
+        }
+
+        /// <summary>
         /// Converts to string.
         /// </summary>
         /// <returns>

@@ -25,9 +25,9 @@ namespace MongoDB.Libmongocrypt
     public class CryptException : Exception
     {
         private readonly uint _code;
-        private readonly Library.ErrorType _errorType;
+        private readonly Library.StatusType _errorType;
 
-        internal CryptException(Library.ErrorType errorType, uint code, string message)
+        internal CryptException(Library.StatusType errorType, uint code, string message)
             : base(message)
         {
             _code = code;

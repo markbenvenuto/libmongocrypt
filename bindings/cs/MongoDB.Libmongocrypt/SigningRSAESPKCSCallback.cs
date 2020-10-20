@@ -25,22 +25,36 @@ namespace MongoDB.Libmongocrypt
     internal static class SigningRSAESPKCSCallback
     {
 #pragma warning disable IDE1006 // Naming Styles
-        public static bool hmac(
+        public static bool rsaSign(
 #pragma warning restore IDE1006 // Naming Styles
             IntPtr ctx,
-            BinarySafeHandle key,
-            BinarySafeHandle @in,
-            BinarySafeHandle @out,
-            StatusSafeHandle status)
+            IntPtr key,
+            IntPtr inData,
+            IntPtr outData,
+            IntPtr statusPtr)
         {
-            throw new Exception("test");
-            //byte[] originalData = GetBytes(@in);
-            //byte[] keyBytes = GetBytes(key);
-            //byte[] signedData;
+            Status status = new Status(StatusSafeHandle.FromIntPtr(statusPtr));
+            try
+            {
+                Binary keyBinary = new Binary(BinarySafeHandle.FromIntPtr(key));
+                Binary inBinary = new Binary(BinarySafeHandle.FromIntPtr(inData));
+                Binary outBinary = new Binary(BinarySafeHandle.FromIntPtr(outData));
 
-            //// Hash and sign the data.
-            //signedData = HashAndSignBytes(originalData, keyBytes);
-            //return true;
+                byte[] originalData = inBinary.ToArray();
+                byte[] keyBytes = keyBinary.ToArray();
+                byte[] signedData;
+
+                // Hash and sign the data.
+                signedData = HashAndSignBytes(originalData, keyBytes);
+
+                outBinary.WriteBytes(signedData);
+            } catch (Exception e)
+            {
+                status.SetStatus(1, e.Message);
+                return false;
+            }
+
+            return true;
         }
 
         public static byte[] HashAndSignBytes(byte[] dataToSign, byte[] key)
@@ -61,17 +75,6 @@ namespace MongoDB.Libmongocrypt
 #else
             throw new System.PlatformNotSupportedException("RSACryptoServiceProvider.ImportPkcs8PrivateKey is supported only on frameworks higher or equal to .netstandard2.1.");
 #endif
-        }
-
-        // private methods
-        private static byte[] GetBytes(BinarySafeHandle handle)
-        {
-            using (var inBinary = new Binary(handle))
-            {
-                var managedBytes = new byte[inBinary.Length];
-                Marshal.Copy(inBinary.Data, managedBytes, 0, (int)inBinary.Length); // uint to int, but int should be enough here
-                return managedBytes;
-            }
         }
     }
 }

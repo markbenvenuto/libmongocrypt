@@ -37,8 +37,8 @@ namespace MongoDB.Libmongocrypt
             // to avoid the restriction on target frameworks that should be higher than .netstandard2.1
             //if (OperationSystemHelper.CurrentOperationSystem != OperationSystemPlatform.Windows)
             {
-                var cryptoCallback = new Library.Delegates.CryptoCallback(
-                    SigningRSAESPKCSCallback.hmac);
+                Library.Delegates.CryptoCallback cryptoCallback = new Library.Delegates.CryptoCallback(
+                    SigningRSAESPKCSCallback.rsaSign);
                 handle.Check(
                     status,
                     Library.mongocrypt_setopt_crypto_hook_sign_rsaes_pkcs1_v1_5

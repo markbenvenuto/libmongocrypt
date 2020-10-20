@@ -33,6 +33,17 @@ namespace MongoDB.Libmongocrypt
         {
         }
 
+        private BinarySafeHandle(IntPtr ptr)
+            : base(ptr, false)
+        {
+        }
+
+        public static BinarySafeHandle FromIntPtr(IntPtr ptr)
+        {
+            return new BinarySafeHandle(ptr);
+        }
+
+
         public override bool IsInvalid
         {
             get
