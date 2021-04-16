@@ -25,6 +25,7 @@
 #include <kms_message/kms_b64.h>
 #include <kms_message/kms_azure_request.h>
 #include <kms_message/kms_gcp_request.h>
+#include <kms_message/kms_kmip_request.h>
 #include "mongocrypt.h"
 
 typedef struct {
@@ -110,7 +111,17 @@ _init_common (mongocrypt_kms_ctx_t *kms,
               _mongocrypt_log_t *log,
               _kms_request_type_t kms_type)
 {
-   kms->parser = kms_response_parser_new ();
+   // KMIP is a binary protocol, the others are HTTP
+   if (kms_type == MONGOCRYPT_KMS_KMIP_ENCRYPT ||
+       kms_type == MONGOCRYPT_KMS_KMIP_MAC ||
+       kms_type == MONGOCRYPT_KMS_KMIP_DECRYPT ||
+       kms_type == MONGOCRYPT_KMS_KMIP_MAC_VERIFY) {
+      kms->kmip_parser = kms_kmip_response_parser_new ();
+      kms->parser = NULL;
+   } else {
+      kms->parser = kms_response_parser_new ();
+      kms->kmip_parser = NULL;
+   }
    kms->log = log;
    kms->status = mongocrypt_status_new ();
    kms->req_type = kms_type;
@@ -387,6 +398,12 @@ mongocrypt_kms_ctx_bytes_needed (mongocrypt_kms_ctx_t *kms)
    if (!kms) {
       return 0;
    }
+
+   if (kms->kmip_parser) {
+      return kms_kmip_response_parser_wants_bytes (
+         kms->kmip_parser, DEFAULT_MAX_KMS_BYTE_REQUEST);
+   }
+
    /* TODO: an oddity of kms-message. After retrieving the JSON result, it
     * resets the parser. */
    if (!mongocrypt_status_ok (kms->status) ||
@@ -757,6 +774,110 @@ fail:
    return ret;
 }
 
+static bool
+ctx_done_kmip_common (
+   mongocrypt_kms_ctx_t *kms,
+   kms_request_t *(*parse_func) (const uint8_t *resp,
+                                 size_t resp_len,
+                                 const kms_request_opt_t *opt))
+{
+   kms_request_t *response = NULL;
+   bool ret;
+   mongocrypt_status_t *status;
+   uint8_t *resp_buffer;
+   size_t resp_length;
+
+   status = kms->status;
+   ret = false;
+
+   kms_kmip_response_get_response (
+      kms->kmip_parser, &resp_buffer, &resp_length);
+
+   response = parse_func (resp_buffer, resp_length, NULL);
+
+   if (kms_request_get_error (response)) {
+      CLIENT_ERR ("Error parsing KMIP encrypt response. Message='%s'",
+                  kms_request_get_error (response));
+      goto fail;
+   }
+
+   kms_request_to_binary (response, (char **) &resp_buffer, &resp_length);
+
+   kms->result.data = bson_malloc0 (resp_length);
+   memcpy (kms->result.data, resp_buffer, resp_length);
+   kms->result.len = resp_length;
+   kms->result.owned = true;
+
+   ret = true;
+fail:
+
+   kms_request_destroy (response);
+   return ret;
+}
+
+static bool
+ctx_done_kmip_encrypt (mongocrypt_kms_ctx_t *kms)
+{
+   return ctx_done_kmip_common (kms, kms_kmip_request_parse_encrypt_response);
+}
+
+static bool
+ctx_done_kmip_mac (mongocrypt_kms_ctx_t *kms)
+{
+   return ctx_done_kmip_common (kms, kms_kmip_request_parse_mac_response);
+}
+
+static bool
+ctx_done_kmip_decrypt (mongocrypt_kms_ctx_t *kms)
+{
+   return ctx_done_kmip_common (kms, kms_kmip_request_parse_decrypt_response);
+}
+
+static bool
+ctx_done_kmip_mac_verify (mongocrypt_kms_ctx_t *kms)
+{
+   kms_request_t *response = NULL;
+   bool ret;
+   mongocrypt_status_t *status;
+   uint8_t *resp_buffer;
+   size_t resp_length;
+   bool valid_mac;
+
+   status = kms->status;
+   ret = false;
+
+   kms_kmip_response_get_response (
+      kms->kmip_parser, &resp_buffer, &resp_length);
+
+   response = kms_kmip_request_parse_mac_verify_response (
+      resp_buffer, resp_length, NULL, &valid_mac);
+
+   if (kms_request_get_error (response)) {
+      CLIENT_ERR ("Error parsing KMIP encrypt response. Message='%s'",
+                  kms_request_get_error (response));
+      goto fail;
+   }
+
+   // Clear the result since we have none
+   kms->result.data = NULL;
+   kms->result.len = 0;
+   kms->result.owned = false;
+
+
+   if (!valid_mac) {
+      CLIENT_ERR ("KMIP could not validate MAC of KEK. Message='%s'",
+                  kms_request_get_error (response));
+      goto fail;
+   }
+
+
+   ret = true;
+fail:
+
+   kms_request_destroy (response);
+   return ret;
+}
+
 bool
 mongocrypt_kms_ctx_feed (mongocrypt_kms_ctx_t *kms, mongocrypt_binary_t *bytes)
 {
@@ -789,6 +910,37 @@ mongocrypt_kms_ctx_feed (mongocrypt_kms_ctx_t *kms, mongocrypt_binary_t *bytes)
                        "bytes",
                        mongocrypt_binary_len (bytes),
                        mongocrypt_binary_data (bytes));
+   }
+
+   // KMIP is a binary protocol, the others are HTTP
+   if (kms->req_type == MONGOCRYPT_KMS_KMIP_ENCRYPT ||
+       kms->req_type == MONGOCRYPT_KMS_KMIP_MAC ||
+       kms->req_type == MONGOCRYPT_KMS_KMIP_DECRYPT ||
+       kms->req_type == MONGOCRYPT_KMS_KMIP_MAC_VERIFY) {
+      if (!kms_kmip_response_parser_feed (
+             kms->kmip_parser, bytes->data, bytes->len)) {
+         CLIENT_ERR ("KMS response parser error with status %d, error: '%s'",
+                     kms_response_parser_status (kms->parser),
+                     kms_response_parser_error (kms->parser));
+         return false;
+      }
+
+      if (0 == mongocrypt_kms_ctx_bytes_needed (kms)) {
+         if (kms->req_type == MONGOCRYPT_KMS_KMIP_ENCRYPT) {
+            return ctx_done_kmip_encrypt (kms);
+         } else if (kms->req_type == MONGOCRYPT_KMS_KMIP_MAC) {
+            return ctx_done_kmip_mac (kms);
+         } else if (kms->req_type == MONGOCRYPT_KMS_KMIP_DECRYPT) {
+            return ctx_done_kmip_decrypt (kms);
+         } else if (kms->req_type == MONGOCRYPT_KMS_KMIP_MAC_VERIFY) {
+            return ctx_done_kmip_mac_verify (kms);
+         } else {
+            CLIENT_ERR ("Unknown request type");
+            return false;
+         }
+      }
+
+      return true;
    }
 
    if (!kms_response_parser_feed (kms->parser, bytes->data, bytes->len)) {
@@ -882,6 +1034,9 @@ _mongocrypt_kms_ctx_cleanup (mongocrypt_kms_ctx_t *kms)
    }
    if (kms->parser) {
       kms_response_parser_destroy (kms->parser);
+   }
+   if (kms->kmip_parser) {
+      kms_kmip_response_parser_destroy (kms->kmip_parser);
    }
    mongocrypt_status_destroy (kms->status);
    _mongocrypt_buffer_cleanup (&kms->msg);
@@ -1377,5 +1532,248 @@ fail:
    bson_free (path_and_query);
    bson_free (payload);
    bson_free (bearer_token_value);
+   return ret;
+}
+
+
+#define KMIP_IV_LEN 16
+
+bool
+_mongocrypt_kms_ctx_init_kmip_encrypt (
+   mongocrypt_kms_ctx_t *kms,
+   _mongocrypt_crypto_t *crypto,
+   _mongocrypt_buffer_t *iv,
+   _mongocrypt_log_t *log,
+   _mongocrypt_opts_t *crypt_opts,
+   struct __mongocrypt_ctx_opts_t *ctx_opts,
+   _mongocrypt_buffer_t *plaintext_key_material)
+{
+   kms_request_opt_t *opt = NULL;
+   mongocrypt_status_t *status;
+   char *path_and_query = NULL;
+   char *payload = NULL;
+   char *req_buffer;
+   size_t req_length;
+   bool ret = false;
+
+   _init_common (kms, log, MONGOCRYPT_KMS_KMIP_ENCRYPT);
+   status = kms->status;
+
+   kms->endpoint =
+      bson_strdup (ctx_opts->kek.provider.kmip.endpoint->host_and_port);
+
+   /* use a random IV. */
+   _mongocrypt_buffer_init (iv);
+   iv->data = bson_malloc0 (KMIP_IV_LEN);
+   BSON_ASSERT (iv->data);
+
+   iv->len = KMIP_IV_LEN;
+   iv->owned = true;
+
+   if (!_mongocrypt_random (crypto, iv, KMIP_IV_LEN, kms->status)) {
+      _mongocrypt_buffer_cleanup (iv);
+      goto fail;
+   }
+
+   opt = kms_request_opt_new ();
+   BSON_ASSERT (opt);
+   kms_request_opt_set_connection_close (opt, true);
+   kms_request_opt_set_provider (opt, KMS_REQUEST_PROVIDER_KMIP);
+   kms->req =
+      kms_kmip_request_encrypt_new (ctx_opts->kek.provider.kmip.encrypt_key_id,
+                                    plaintext_key_material->data,
+                                    plaintext_key_material->len,
+                                    iv->data,
+                                    iv->len,
+                                    opt);
+
+   if (kms_request_get_error (kms->req)) {
+      CLIENT_ERR ("error constructing KMIP encrypt message: %s",
+                  kms_request_get_error (kms->req));
+      goto fail;
+   }
+
+   kms_request_to_binary (kms->req, &req_buffer, &req_length);
+
+   _mongocrypt_buffer_init (&kms->msg);
+   kms->msg.data = (uint8_t *) req_buffer;
+   kms->msg.len = (uint32_t) req_length;
+   kms->msg.owned = false;
+
+   ret = true;
+fail:
+   kms_request_opt_destroy (opt);
+   bson_free (path_and_query);
+   bson_free (payload);
+   return ret;
+}
+
+
+bool
+_mongocrypt_kms_ctx_init_kmip_mac (mongocrypt_kms_ctx_t *kms,
+                                   _mongocrypt_log_t *log,
+                                   _mongocrypt_opts_t *crypt_opts,
+                                   struct __mongocrypt_ctx_opts_t *ctx_opts,
+                                   _mongocrypt_buffer_t *plaintext_key_material)
+{
+   kms_request_opt_t *opt = NULL;
+   mongocrypt_status_t *status;
+   char *path_and_query = NULL;
+   char *payload = NULL;
+   char *req_buffer;
+   size_t req_length;
+   bool ret = false;
+
+   _init_common (kms, log, MONGOCRYPT_KMS_KMIP_MAC);
+   status = kms->status;
+
+   kms->endpoint =
+      bson_strdup (ctx_opts->kek.provider.kmip.endpoint->host_and_port);
+
+   opt = kms_request_opt_new ();
+   BSON_ASSERT (opt);
+   kms_request_opt_set_connection_close (opt, true);
+   kms_request_opt_set_provider (opt, KMS_REQUEST_PROVIDER_KMIP);
+   kms->req = kms_kmip_request_mac_new (ctx_opts->kek.provider.kmip.mac_key_id,
+                                        plaintext_key_material->data,
+                                        plaintext_key_material->len,
+                                        opt);
+
+   if (kms_request_get_error (kms->req)) {
+      CLIENT_ERR ("error constructing KMIP mac message: %s",
+                  kms_request_get_error (kms->req));
+      goto fail;
+   }
+
+   kms_request_to_binary (kms->req, &req_buffer, &req_length);
+
+   _mongocrypt_buffer_init (&kms->msg);
+   kms->msg.data = (uint8_t *) req_buffer;
+   kms->msg.len = (uint32_t) req_length;
+   kms->msg.owned = false;
+
+   ret = true;
+fail:
+   kms_request_opt_destroy (opt);
+   bson_free (path_and_query);
+   bson_free (payload);
+   return ret;
+}
+
+
+bool
+_mongocrypt_kms_ctx_init_kmip_mac_verify (mongocrypt_kms_ctx_t *kms,
+                                          _mongocrypt_opts_t *crypt_opts,
+                                          _mongocrypt_key_doc_t *key,
+                                          _mongocrypt_log_t *log)
+{
+   kms_request_opt_t *opt = NULL;
+   mongocrypt_status_t *status;
+   char *path_and_query = NULL;
+   char *payload = NULL;
+   char *req_buffer;
+   size_t req_length;
+   bool ret = false;
+
+   _init_common (kms, log, MONGOCRYPT_KMS_KMIP_MAC_VERIFY);
+   status = kms->status;
+
+   kms->endpoint = bson_strdup (key->kek.provider.kmip.endpoint->host_and_port);
+
+   opt = kms_request_opt_new ();
+   BSON_ASSERT (opt);
+   kms_request_opt_set_connection_close (opt, true);
+   kms_request_opt_set_provider (opt, KMS_REQUEST_PROVIDER_KMIP);
+
+   const size_t MAC_LENGTH = 32;
+
+   kms->req =
+      kms_kmip_request_mac_verify_new (key->kek.provider.kmip.mac_key_id,
+                                       key->key_material.data + MAC_LENGTH,
+                                       key->key_material.len - MAC_LENGTH,
+                                       key->key_material.data,
+                                       MAC_LENGTH,
+                                       opt);
+
+   if (kms_request_get_error (kms->req)) {
+      CLIENT_ERR ("error constructing KMIP mac verify message: %s",
+                  kms_request_get_error (kms->req));
+      goto fail;
+   }
+
+   kms_request_to_binary (kms->req, &req_buffer, &req_length);
+
+   _mongocrypt_buffer_init (&kms->msg);
+   kms->msg.data = (uint8_t *) req_buffer;
+   kms->msg.len = (uint32_t) req_length;
+   kms->msg.owned = false;
+
+   ret = true;
+fail:
+   kms_request_opt_destroy (opt);
+   bson_free (path_and_query);
+   bson_free (payload);
+   return ret;
+}
+
+
+bool
+_mongocrypt_kms_ctx_init_kmip_decrypt (mongocrypt_kms_ctx_t *kms,
+                                       _mongocrypt_opts_t *crypt_opts,
+                                       _mongocrypt_key_doc_t *key,
+                                       _mongocrypt_log_t *log)
+{
+   kms_request_opt_t *opt = NULL;
+   mongocrypt_status_t *status;
+   char *path_and_query = NULL;
+   char *payload = NULL;
+   char *req_buffer;
+   size_t req_length;
+   bool ret = false;
+
+   _init_common (kms, log, MONGOCRYPT_KMS_KMIP_DECRYPT);
+   status = kms->status;
+
+   kms->endpoint = bson_strdup (key->kek.provider.kmip.endpoint->host_and_port);
+
+   opt = kms_request_opt_new ();
+   BSON_ASSERT (opt);
+   kms_request_opt_set_connection_close (opt, true);
+   kms_request_opt_set_provider (opt, KMS_REQUEST_PROVIDER_KMIP);
+
+   const size_t MAC_LENGTH = 32;
+   const size_t IV_LENGTH = 16;
+   // const size_t mac_offset = 0;
+   const size_t iv_offset = MAC_LENGTH;
+   const size_t encrypted_offset = iv_offset + IV_LENGTH;
+   const size_t encrypted_length =
+      key->key_material.len - MAC_LENGTH - IV_LENGTH;
+
+   kms->req =
+      kms_kmip_request_decrypt_new (key->kek.provider.kmip.encrypt_key_id,
+                                    key->key_material.data + encrypted_offset,
+                                    encrypted_length,
+                                    key->key_material.data + iv_offset,
+                                    IV_LENGTH,
+                                    opt);
+
+   if (kms_request_get_error (kms->req)) {
+      CLIENT_ERR ("error constructing KMIP decrypt message: %s",
+                  kms_request_get_error (kms->req));
+      goto fail;
+   }
+
+   kms_request_to_binary (kms->req, &req_buffer, &req_length);
+
+   _mongocrypt_buffer_init (&kms->msg);
+   kms->msg.data = (uint8_t *) req_buffer;
+   kms->msg.len = (uint32_t) req_length;
+   kms->msg.owned = false;
+
+   ret = true;
+fail:
+   kms_request_opt_destroy (opt);
+   bson_free (path_and_query);
+   bson_free (payload);
    return ret;
 }

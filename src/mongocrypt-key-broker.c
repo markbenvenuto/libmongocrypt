@@ -456,7 +456,7 @@ _mongocrypt_key_broker_add_doc (_mongocrypt_key_broker_t *kb,
    key_request_t *key_request;
    key_returned_t *key_returned;
    _mongocrypt_kms_provider_t kek_provider;
-   char* access_token = NULL;
+   char *access_token = NULL;
 
    if (kb->state != KB_ADDING_DOCS) {
       _key_broker_fail_w_msg (
@@ -529,7 +529,6 @@ _mongocrypt_key_broker_add_doc (_mongocrypt_key_broker_t *kb,
          goto done;
       }
    } else if (kek_provider == MONGOCRYPT_KMS_PROVIDER_AZURE) {
-
       access_token = _mongocrypt_cache_oauth_get (kb->crypt->cache_oauth_azure);
       if (!access_token) {
          key_returned->needs_auth = true;
@@ -560,7 +559,6 @@ _mongocrypt_key_broker_add_doc (_mongocrypt_key_broker_t *kb,
          }
       }
    } else if (kek_provider == MONGOCRYPT_KMS_PROVIDER_GCP) {
-
       access_token = _mongocrypt_cache_oauth_get (kb->crypt->cache_oauth_gcp);
       if (!access_token) {
          key_returned->needs_auth = true;
@@ -589,6 +587,38 @@ _mongocrypt_key_broker_add_doc (_mongocrypt_key_broker_t *kb,
             goto done;
          }
       }
+   } else if (kek_provider == MONGOCRYPT_KMS_PROVIDER_KMIP) {
+      // TODO - we need to verify the MAC first
+      // to do this, we need a per-key state machine which the keybroker does
+      // not have yet. if ( key_returned->kmip_state_need_mac_verify == false )
+      // {
+      //    key_returned->needs_auth = true;
+
+      //    //const size_t MAC_LENGTH=32;
+
+      //     if (!_mongocrypt_kms_ctx_init_kmip_mac_verify (
+      //          &key_returned->kms,
+      //          &kb->crypt->opts,
+      //                                               key_doc,
+      //                                               &kb->crypt->log)) {
+      //       mongocrypt_kms_ctx_status (&key_returned->kms, kb->status);
+      //       _key_broker_fail (kb);
+      //       goto done;
+      //    }
+      // } else
+
+      {
+         if (!_mongocrypt_kms_ctx_init_kmip_decrypt (&key_returned->kms,
+                                                     &kb->crypt->opts,
+                                                     key_doc,
+                                                     &kb->crypt->log)) {
+            mongocrypt_kms_ctx_status (&key_returned->kms, kb->status);
+            _key_broker_fail (kb);
+            goto done;
+         }
+      }
+
+
    } else {
       _key_broker_fail_w_msg (kb, "unrecognized kms provider");
       goto done;
@@ -759,6 +789,8 @@ _mongocrypt_key_broker_kms_done (_mongocrypt_key_broker_t *kb)
          }
       }
 
+      // bool keys_need_mac_verify = false;
+
       /* Auth should be finished, create any remaining KMS requests. */
       for (key_returned = kb->keys_returned; NULL != key_returned;
            key_returned = key_returned->next) {
@@ -812,6 +844,17 @@ _mongocrypt_key_broker_kms_done (_mongocrypt_key_broker_t *kb)
 
             key_returned->needs_auth = false;
             bson_free (access_token);
+         } else if (key_returned->doc->kek.kms_provider ==
+                    MONGOCRYPT_KMS_PROVIDER_KMIP) {
+            if (!_mongocrypt_kms_ctx_init_kmip_decrypt (&key_returned->kms,
+                                                        &kb->crypt->opts,
+                                                        key_returned->doc,
+                                                        &kb->crypt->log)) {
+               mongocrypt_kms_ctx_status (&key_returned->kms, kb->status);
+               return _key_broker_fail (kb);
+            }
+
+            key_returned->needs_auth = false;
          } else {
             return _key_broker_fail_w_msg (kb,
                                            "unexpected, authenticating but "
@@ -830,6 +873,7 @@ _mongocrypt_key_broker_kms_done (_mongocrypt_key_broker_t *kb)
       if (key_returned->doc->kek.kms_provider == MONGOCRYPT_KMS_PROVIDER_AWS ||
           key_returned->doc->kek.kms_provider ==
              MONGOCRYPT_KMS_PROVIDER_AZURE ||
+          key_returned->doc->kek.kms_provider == MONGOCRYPT_KMS_PROVIDER_KMIP ||
           key_returned->doc->kek.kms_provider == MONGOCRYPT_KMS_PROVIDER_GCP) {
          if (key_returned->decrypted) {
             return _key_broker_fail_w_msg (

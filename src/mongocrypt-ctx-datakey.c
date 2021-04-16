@@ -175,6 +175,36 @@ _kms_start (mongocrypt_ctx_t *ctx)
          }
       }
       ctx->state = MONGOCRYPT_CTX_NEED_KMS;
+   } else if (ctx->opts.kek.kms_provider == MONGOCRYPT_KMS_PROVIDER_KMIP) {
+      if ( dkctx->kmip.state == KMIP_KMS_STATE_NONE ) {
+          if (!_mongocrypt_kms_ctx_init_kmip_encrypt (
+                &dkctx->kms,
+                dkctx->parent.crypt->crypto,
+                &dkctx->kmip.iv,
+                &ctx->crypt->log,
+                &ctx->crypt->opts,
+                &ctx->opts,
+                &dkctx->plaintext_key_material)) {
+            mongocrypt_kms_ctx_status (&dkctx->kms, ctx->status);
+            _mongocrypt_ctx_fail (ctx);
+            goto done;
+         }
+       dkctx->kmip.state = KMIP_KMS_STATE_ENCRYPT_NEED_ENCRYPT;
+      } else {
+          if (!_mongocrypt_kms_ctx_init_kmip_mac (
+                &dkctx->kms,
+                &ctx->crypt->log,
+                &ctx->crypt->opts,
+                &ctx->opts,
+                &dkctx->plaintext_key_material)) {
+            mongocrypt_kms_ctx_status (&dkctx->kms, ctx->status);
+            _mongocrypt_ctx_fail (ctx);
+            goto done;
+         }
+       dkctx->kmip.state = KMIP_KMS_STATE_ENCRYPT_NEED_MAC;
+      }
+
+      ctx->state = MONGOCRYPT_CTX_NEED_KMS;
    } else {
       _mongocrypt_ctx_fail_w_msg (ctx, "unsupported KMS provider");
       goto done;
@@ -224,6 +254,36 @@ _kms_done (mongocrypt_ctx_t *ctx)
          return _mongocrypt_ctx_fail (ctx);
       }
       return _kms_start (ctx);
+   } else if (dkctx->kms.req_type == MONGOCRYPT_KMS_KMIP_ENCRYPT) {
+
+      // Store the encrypted payload so we can mac it next
+      // TODO use _mongocrypt_buffer_steal instead?
+     dkctx->kmip.intermediate_key_material = dkctx->kms.result;
+      memset(&dkctx->kms.result, 0, sizeof(dkctx->kms.result));
+
+      // Move on to getting a mac
+      return _kms_start (ctx);
+   } else if (dkctx->kms.req_type == MONGOCRYPT_KMS_KMIP_MAC) {
+
+      // Make the final payload to return to the user
+      // Make it a MAC + IV + Encrypted
+      _mongocrypt_buffer_t buffer;
+      _mongocrypt_buffer_init(&buffer);
+      const size_t len =  dkctx->kmip.intermediate_key_material.len +  dkctx->kmip.iv.len + dkctx->kms.result.len;
+      _mongocrypt_buffer_resize(&buffer, len);
+
+      const size_t MAC_LENGTH = 32;
+      const size_t IV_LENGTH = 16;
+      const size_t mac_offset = 0;
+      const size_t iv_offset = MAC_LENGTH;
+      const size_t encrypted_offset = iv_offset + IV_LENGTH;
+
+      memcpy(buffer.data + mac_offset, dkctx->kms.result.data, MAC_LENGTH);
+      memcpy(buffer.data + iv_offset, dkctx->kmip.iv.data, IV_LENGTH);
+      memcpy(buffer.data + encrypted_offset, dkctx->kmip.intermediate_key_material.data, dkctx->kmip.intermediate_key_material.len);
+
+      _mongocrypt_buffer_steal(&dkctx->kms.result, &buffer);
+      // Fall through
    }
 
    /* Store the result. */
